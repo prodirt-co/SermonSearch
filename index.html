@@ -215,48 +215,90 @@
 
     function exportWord() {
     const title = document.getElementById('export-title').innerText;
-    const content = document.getElementById('sermon-display').innerText;
-
-    // This specific header tells Word to treat the content as "Pre-formatted"
-    // which prevents the 'squashing' you see in your screenshots.
+    const contentHtml = document.getElementById('sermon-display').innerHTML;
+    
+    // We wrap the colored HTML in a Word-friendly envelope
     const html = `
-        <html xmlns:o="urn:schemas-microsoft-com:office:office" 
-              xmlns:w="urn:schemas-microsoft-com:office:word" 
-              xmlns="http://www.w3.org/TR/REC-html40">
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
         <head><meta charset="utf-8">
         <style>
-            body { 
-                font-family: 'Courier New', monospace; 
-                font-size: 11pt; 
-                line-height: 1.2;
-            }
-            .sermon-content { 
+            body { font-family: 'Courier New', monospace; font-size: 11pt; }
+            /* This is the magic CSS for Word */
+            .sermon-body { 
                 white-space: pre-wrap; 
-                mso-white-space-treatment: preserve;
-                display: block;
+                mso-white-space-treatment: preserve; 
             }
+            span { display: inline; }
         </style>
         </head>
         <body>
-            <h1 style="font-family: Arial; border-bottom: 1px solid black;">${title}</h1>
-            <div class="sermon-content">${content}</div>
+            <h1>${title}</h1>
+            <div class="sermon-body">${contentHtml}</div>
         </body></html>`;
 
     const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${title.replace(/[/\\?%*:|"<>]/g, '-')}.doc`;
+    link.download = `${title}.doc`;
     link.click();
-    
-    // Clean up memory
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
     function bulkExport() {
         alert("Bulk export is being rebuilt to support the new formatting fix. Individual export is ready!");
     }
+// This function converts the hidden "Bad" characters into colored HTML spans
+function ansiToHtml(text) {
+    if (!text) return "";
+    
+    // Mapping common ANSI-style codes to CSS colors
+    // This targets the patterns Notepad++ is likely seeing
+    const colorMap = {
+        '[31m': 'color: #ff5555; font-weight: bold;', // Red
+        '[32m': 'color: #50fa7b;',                   // Green
+        '[33m': 'color: #f1fa8c;',                   // Yellow/Orange
+        '[34m': 'color: #8be9fd;',                   // Blue/Cyan
+        '[35m': 'color: #ff79c6;',                   // Magenta
+        '[0m':  '</span>'                            // Reset
+    };
 
+    // Replace the hidden escape character (often \x1b or \033) 
+    // We'll look for the character patterns Notepad++ identifies
+    let formatted = text.replace(/\u001b\[\d+m/g, (match) => {
+        const code = match.substring(1);
+        return colorMap[code] ? `<span style="${colorMap[code]}">` : '<span>';
+    });
+
+    // If the data uses the older ^[ format
+    formatted = formatted.replace(/\^\[\[(\d+)m/g, (match, p1) => {
+        const lookup = `[${p1}m`;
+        return colorMap[lookup] ? `<span style="${colorMap[lookup]}">` : '<span>';
+    });
+
+    return formatted;
+}
+
+function setSelection(uid) {
+    selectedUid = uid;
+    const selected = allEntries.find(x => x._uid === uid);
+    const panel = document.getElementById('details-panel');
+    
+    if(selected) {
+        // We stop stripping "bad chars" here and let the translator handle them
+        const coloredWords = ansiToHtml(selected.words);
+        
+        panel.innerHTML = `
+        <div class="action-bar">
+            <button class="btn btn-gray" onclick="copyContent()">📋 Copy</button>
+            <button class="btn btn-blue" onclick="exportWord()">📄 Word</button>
+        </div>
+        <div class="scroll-content">
+            <h1 id="export-title" style="color:#f59e0b;">${selected.title}</h1>
+            <div id="sermon-display" style="white-space: pre-wrap; font-family: 'Courier New', monospace;">${coloredWords}</div>
+        </div>`;
+    }
+    renderSidebar();
+}
     document.getElementById('main-search').addEventListener('input', () => {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(renderSidebar, 250);
@@ -274,6 +316,7 @@
 </script>
 </body>
 </html>
+
 
 
 
