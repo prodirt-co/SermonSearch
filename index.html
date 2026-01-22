@@ -5,394 +5,292 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sermon Database Viewer</title>
     <style>
-        /* CORE STYLES */
+        /* 1. LAYOUT & COLOR SCHEME */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: #0f172a;
-            color: #e2e8f0;
-            overflow: hidden; /* Prevent double scrollbars */
-        }
-
-        /* LOADING OVERLAY */
-        #loading-overlay {
-            position: fixed;
-            inset: 0;
-            background: #0f172a;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            transition: opacity 0.5s ease;
-        }
-
-        .progress-container {
-            width: 300px;
-            height: 12px;
-            background: #1e293b;
-            border-radius: 6px;
-            margin: 20px 0;
-            border: 1px solid #334155;
-            overflow: hidden;
-        }
-
-        #progress-bar {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #d97706, #f59e0b);
-            transition: width 0.3s;
-        }
-
-        .skip-btn {
-            margin-top: 30px;
-            background: none;
-            border: 1px solid #475569;
-            color: #94a3b8;
-            padding: 5px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-
-        /* LAYOUT */
-        #main-wrapper {
-            display: none;
-            opacity: 0;
-            transition: opacity 0.8s ease;
+            color: #f1f5f9;
             height: 100vh;
             display: flex;
             flex-direction: column;
-        }
-
-        header {
-            background: #1e293b;
-            padding: 1rem 2rem;
-            border-bottom: 1px solid #334155;
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .search-bar {
-            display: flex;
-            gap: 10px;
-            flex: 1;
-            max-width: 800px;
-        }
-
-        input, select {
-            padding: 10px 15px;
-            background: #0f172a;
-            border: 1px solid #334155;
-            color: white;
-            border-radius: 6px;
-            font-size: 1rem;
-        }
-
-        input { flex: 2; }
-        select { flex: 1; max-width: 200px; }
-
-        .container {
-            display: grid;
-            grid-template-columns: 350px 1fr;
-            flex: 1;
             overflow: hidden;
         }
 
-        /* LIST & DETAILS */
-        .results-list {
-            border-right: 1px solid #334155;
-            overflow-y: auto;
-            background: #111827;
+        /* 2. LOADING OVERLAY */
+        #loading-overlay {
+            position: fixed; inset: 0; background: #0f172a;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999; transition: opacity 0.5s;
         }
+        .progress-box {
+            width: 300px; height: 15px; background: #1e293b;
+            border-radius: 10px; border: 1px solid #334155; overflow: hidden; margin: 20px 0;
+        }
+        #progress-bar { width: 0%; height: 100%; background: #eabb22; transition: width 0.2s; }
 
+        /* 3. HEADER & SEARCH (Fixed giant bar) */
+        header { background: #1e293b; padding: 15px 30px; border-bottom: 2px solid #334155; }
+        .header-flex { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+        .search-area { display: flex; gap: 10px; flex-grow: 1; max-width: 900px; }
+        
+        input, select {
+            padding: 12px; background: #0f172a; border: 1px solid #475569;
+            color: white; border-radius: 6px; font-size: 1rem;
+        }
+        input { flex-grow: 2; }
+        select { flex-grow: 1; max-width: 220px; } /* Limits width of topic bar */
+
+        /* 4. MAIN CONTENT AREA */
+        .main-container { display: flex; flex: 1; overflow: hidden; }
+        
+        /* Sidebar List */
+        .sidebar {
+            width: 380px; background: #111827; border-right: 1px solid #334155;
+            display: flex; flex-direction: column;
+        }
+        .results-list { flex: 1; overflow-y: auto; }
         .result-item {
-            padding: 15px;
-            border-bottom: 1px solid #1e293b;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            width: 100%;
-            text-align: left;
-            background: none;
-            color: inherit;
+            padding: 15px; border-bottom: 1px solid #1e293b; cursor: pointer;
+            display: flex; align-items: flex-start; gap: 12px; width: 100%;
+            background: transparent; color: inherit; text-align: left; border-left: 4px solid transparent;
         }
-
         .result-item:hover { background: #1e293b; }
-        .result-item.active { background: #1e3a8a; border-left: 4px solid #3b82f6; }
+        .result-item.active { background: #1e3a8a; border-left-color: #f59e0b; }
 
-        .details-panel {
-            padding: 2rem;
-            overflow-y: auto;
-            background: #0f172a;
-        }
+        /* Details Panel */
+        .details-panel { flex: 1; padding: 40px; overflow-y: auto; background: #0f172a; }
 
-        /* PASTOR ACCESSIBILITY */
+        /* 5. PASTOR ACCESSIBILITY (Large Text & Contrast) */
         .content-box {
-            font-size: 1.3rem !important; /* Large text */
-            line-height: 1.8;
+            font-size: 1.5rem; /* Extra large for 80+ eyesight */
+            line-height: 1.9;
             background: #1e293b;
-            padding: 2rem;
-            border-radius: 8px;
+            padding: 30px;
+            border-radius: 12px;
             white-space: pre-wrap;
-            color: #f1f5f9;
+            color: #ffffff;
+            border: 1px solid #334155;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
         }
+        mark { background: #fde047; color: black; font-weight: bold; padding: 0 4px; border-radius: 3px; }
 
-        mark {
-            background: #fde047; /* Bright yellow highlight */
-            color: #000;
-            font-weight: bold;
-            padding: 0 2px;
-        }
-
+        /* Buttons */
+        .btn-group { display: flex; gap: 12px; margin-bottom: 25px; }
         .btn {
-            padding: 10px 20px;
-            border-radius: 6px;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+            padding: 12px 24px; border-radius: 8px; border: none; font-weight: bold;
+            cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 1rem;
         }
-
-        .btn-word { background: #2b5797; color: white; }
-        .btn-copy { background: #475569; color: white; }
-        .btn-bulk { background: #d97706; color: white; margin-left: 10px; }
-
-        .section-title {
-            color: #94a3b8;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 0.1em;
-            margin: 20px 0 10px;
-        }
+        .btn-blue { background: #2563eb; color: white; }
+        .btn-gray { background: #475569; color: white; }
+        .btn-orange { background: #d97706; color: white; }
+        .btn:hover { filter: brightness(1.2); }
 
         .tag {
-            background: #334155;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            margin-right: 5px;
-            cursor: pointer;
+            display: inline-block; background: #334155; padding: 5px 12px;
+            border-radius: 20px; font-size: 0.9rem; margin: 0 5px 5px 0; cursor: pointer;
         }
+        .section-label { color: #94a3b8; text-transform: uppercase; font-size: 0.8rem; margin: 25px 0 10px; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="loading-overlay">
-        <h2 style="letter-spacing: 2px;">📚 SERMON DATABASE</h2>
-        <div class="progress-container">
-            <div id="progress-bar"></div>
-        </div>
-        <div id="loading-status" style="color: #94a3b8; font-family: monospace;">Initializing...</div>
-        <button class="skip-btn" onclick="finishLoading()">Skip & Open Database</button>
+        <h1 style="letter-spacing: 3px;">📚 SERMON DATABASE</h1>
+        <div class="progress-box"><div id="progress-bar"></div></div>
+        <div id="loading-status" style="font-family: monospace; color: #94a3b8;">Initializing...</div>
+        <button onclick="forceStart()" style="margin-top:20px; background:none; border:1px solid #475569; color:#475569; cursor:pointer; padding:5px 10px;">Skip Loading</button>
     </div>
 
-    <div id="main-wrapper">
-        <header>
-            <div class="header-content">
-                <div>
-                    <h1 style="font-size: 1.2rem;">Sermon Browser</h1>
-                    <p id="entry-count" style="font-size: 0.8rem; color: #94a3b8;">0 entries</p>
-                </div>
-                <div class="search-bar">
-                    <input type="text" id="search-input" placeholder="Type to search titles or content...">
-                    <select id="topic-filter">
-                        <option value="">All Topics</option>
-                    </select>
-                </div>
+    <header>
+        <div class="header-flex">
+            <div>
+                <h2 style="color: #f59e0b;">Sermon Search</h2>
+                <span id="stat-count" style="font-size: 0.8rem; color: #94a3b8;">0 sermons loaded</span>
             </div>
-        </header>
+            <div class="search-area">
+                <input type="text" id="search-input" placeholder="Search for words or titles...">
+                <select id="topic-filter"><option value="">All Topics</option></select>
+            </div>
+        </div>
+    </header>
 
-        <div class="container">
+    <div class="main-container">
+        <div class="sidebar">
             <div class="results-list" id="results-list"></div>
-            <div class="details-panel" id="details-panel">
-                <div style="text-align: center; margin-top: 100px; color: #475569;">
-                    <h2>Select a sermon from the left to begin</h2>
-                </div>
+        </div>
+        <div class="details-panel" id="details-panel">
+            <div style="text-align: center; margin-top: 100px; color: #475569;">
+                <h2>Welcome, Pastor.</h2>
+                <p>Select a sermon from the left to read or export.</p>
             </div>
         </div>
     </div>
 
     <script>
-        let allEntries = [];
-        let selectedEntryId = null;
-        let multiSelectedIds = new Set();
-        let chunksLoaded = 0;
-        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+        // --- GLOBAL DATA ---
+        var allEntries = [];
+        var selectedUid = null;
+        var checkedUids = new Set();
+        var chunksCount = 0;
+        var alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
         alphabet.push("OTH");
-        const totalChunks = alphabet.length;
 
-        // 1. HIGHLIGHTER (Pastor's Vision Aid)
-        function highlight(text, query) {
-            if (!query || query.length < 2) return text;
-            const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp(`(${escapedQuery})`, 'gi');
+        // --- HIGHLIGHTER ---
+        function applyHighlight(text, term) {
+            if (!term || term.length < 2) return text;
+            var safeTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            var regex = new RegExp('(' + safeTerm + ')', 'gi');
             return text.replace(regex, '<mark>$1</mark>');
         }
 
-        // 2. DATA LOADING
-        async function loadEverything() {
-            // Safety timeout: if it takes more than 12 seconds, just show what we have
-            setTimeout(() => {
-                if (allEntries.length > 0 && document.getElementById('loading-overlay').style.display !== 'none') {
-                    console.log("Safety timeout reached, forcing display.");
-                    finishLoading();
-                }
-            }, 12000);
-
-            for (const letter of alphabet) {
+        // --- DATA LOADING ---
+        async function startLoading() {
+            for (var i = 0; i < alphabet.length; i++) {
+                var letter = alphabet[i];
                 try {
-                    const response = await fetch(`./sermons_${letter}.json`);
+                    var response = await fetch('./sermons_' + letter + '.json');
                     if (response.ok) {
-                        const data = await response.json();
-                        data.forEach((item, idx) => {
-                            item._uid = `${letter}-${idx}`;
-                        });
+                        var data = await response.json();
+                        for (var j = 0; j < data.length; j++) {
+                            data[j]._uid = letter + '-' + j; // Assign Unique ID
+                        }
                         allEntries = allEntries.concat(data);
                     }
-                } catch (e) {
-                    console.warn(`Missing: sermons_${letter}.json`);
-                }
-                chunksLoaded++;
-                updateProgress();
+                } catch (e) { console.warn("Missing: " + letter); }
+                
+                chunksCount++;
+                var pct = Math.round((chunksCount / alphabet.length) * 100);
+                document.getElementById('progress-bar').style.width = pct + '%';
+                document.getElementById('loading-status').innerText = "Loading: " + pct + "% (" + allEntries.length + " entries)";
+                
+                if (chunksCount === alphabet.length) { forceStart(); }
             }
         }
 
-        function updateProgress() {
-            const percent = Math.round((chunksLoaded / totalChunks) * 100);
-            document.getElementById('progress-bar').style.width = percent + '%';
-            document.getElementById('loading-status').textContent = `Loading: ${percent}% (${allEntries.length.toLocaleString()} sermons)`;
+        function forceStart() {
+            allEntries.sort(function(a, b) { return (a.title || "").localeCompare(b.title || ""); });
+            buildTopicDropdown();
+            renderUI();
+            document.getElementById('loading-overlay').style.opacity = '0';
+            setTimeout(function() { document.getElementById('loading-overlay').style.display = 'none'; }, 600);
+        }
+
+        // --- EXPORT TO WORD ---
+        function exportWord(items) {
+            if (items.length === 0) return;
+            var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
+                       '<head><meta charset="utf-8"></head><body style="font-family:Arial, sans-serif; padding:40px;">';
             
-            if (chunksLoaded === totalChunks) {
-                finishLoading();
+            for (var i = 0; i < items.length; i++) {
+                var e = items[i];
+                html += '<h1 style="color:#2b5797; border-bottom:1px solid #eee;">' + e.title + '</h1>';
+                html += '<p><b>Topics:</b> ' + (e.topics || []).join(', ') + '</p>';
+                html += '<div style="white-space:pre-wrap; font-size:12pt; margin-top:20px;">' + (e.words || "") + '</div>';
+                if (items.length > 1) html += '<br style="page-break-before:always">';
             }
-        }
+            html += '</body></html>';
 
-        function finishLoading() {
-            const overlay = document.getElementById('loading-overlay');
-            const wrapper = document.getElementById('main-wrapper');
-            
-            allEntries.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
-            
-            updateTopicFilter();
-            render();
-
-            overlay.style.opacity = '0';
-            wrapper.style.display = 'flex';
-            setTimeout(() => {
-                overlay.style.display = 'none';
-                wrapper.style.opacity = '1';
-            }, 500);
-        }
-
-        // 3. EXPORT & WORD
-        function exportToWord(entries) {
-            let html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-            <head><meta charset='utf-8'><title>Sermon Export</title></head><body style="font-family:Arial;">`;
-            
-            entries.forEach(e => {
-                html += `<h1 style="color:#2b5797;">${e.title}</h1>`;
-                html += `<p><b>Topics:</b> ${(e.topics || []).join(', ')}</p>`;
-                html += `<hr><div style="white-space:pre-wrap;">${e.words}</div>`;
-                html += `<br style="page-break-before:always">`;
-            });
-            html += `</body></html>`;
-
-            const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
+            var blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement('a');
             link.href = url;
-            link.download = entries.length === 1 ? `${entries[0].title}.doc` : 'Sermons_Collection.doc';
+            link.download = items.length === 1 ? items[0].title + '.doc' : 'Sermon_Collection.doc';
             link.click();
         }
 
-        function copyToClipboard() {
-            const entry = allEntries.find(e => e._uid === selectedEntryId);
-            navigator.clipboard.writeText(`${entry.title}\n\n${entry.words}`);
-            alert("Copied to clipboard!");
-        }
+        // --- INTERFACE ENGINE ---
+        function renderUI() {
+            var query = document.getElementById('search-input').value.toLowerCase();
+            var topic = document.getElementById('topic-filter').value;
 
-        // 4. UI RENDER
-        function render() {
-            const query = document.getElementById('search-input').value.toLowerCase();
-            const topic = document.getElementById('topic-filter').value;
-
-            const filtered = allEntries.filter(e => {
-                const text = (e.title + " " + e.words).toLowerCase();
-                const matchesSearch = !query || text.includes(query);
-                const matchesTopic = !topic || (e.topics || []).includes(topic);
-                return matchesSearch && matchesTopic;
+            var filtered = allEntries.filter(function(e) {
+                var inText = (e.title + " " + e.words).toLowerCase().indexOf(query) !== -1;
+                var inTopic = !topic || (e.topics || []).indexOf(topic) !== -1;
+                return inText && inTopic;
             });
 
-            const list = document.getElementById('results-list');
-            list.innerHTML = filtered.map(e => `
-                <div class="result-item ${selectedEntryId === e._uid ? 'active' : ''}" onclick="selectSermon('${e._uid}')">
-                    <input type="checkbox" style="width:18px;height:18px" ${multiSelectedIds.has(e._uid) ? 'checked' : ''} onclick="event.stopPropagation(); toggleSelect('${e._uid}')">
-                    <div style="flex:1">
-                        <div style="font-weight:bold; margin-bottom:4px">${highlight(e.title, query)}</div>
-                        <div style="font-size:0.75rem; color:#94a3b8">${(e.topics || []).slice(0,2).join(', ')}</div>
-                    </div>
-                </div>
-            `).join('');
-
-            const details = document.getElementById('details-panel');
-            const selected = allEntries.find(e => e._uid === selectedEntryId);
-
-            if (selected) {
-                details.innerHTML = `
-                    <div style="margin-bottom: 20px; display:flex; gap:10px; align-items:center;">
-                        <button class="btn btn-copy" onclick="copyToClipboard()">📋 Copy</button>
-                        <button class="btn btn-word" onclick="exportToWord([allEntries.find(e=>e._uid==='${selectedEntryId}')])">📄 Word</button>
-                        ${multiSelectedIds.size > 0 ? `<button class="btn btn-bulk" onclick="exportBulk()">📦 Export ${multiSelectedIds.size} Selected</button>` : ''}
-                    </div>
-                    <h1 style="font-size:2rem; margin-bottom:10px">${highlight(selected.title, query)}</h1>
-                    <div class="section-title">Topics</div>
-                    <div>${(selected.topics || []).map(t => `<span class="tag" onclick="setTopic('${t}')">${t}</span>`).join('')}</div>
-                    <div class="section-title">Sermon Content</div>
-                    <div class="content-box">${highlight(selected.words, query)}</div>
-                `;
+            // 1. Sidebar List
+            var listHtml = '';
+            for (var i = 0; i < filtered.length; i++) {
+                var e = filtered[i];
+                var isActive = selectedUid === e._uid ? 'active' : '';
+                var isChecked = checkedUids.has(e._uid) ? 'checked' : '';
+                
+                listHtml += '<div class="result-item ' + isActive + '" onclick="setSelection(\'' + e._uid + '\')">' +
+                            '<input type="checkbox" ' + isChecked + ' style="width:20px;height:20px;" onclick="event.stopPropagation(); toggleCheck(\'' + e._uid + '\')">' +
+                            '<div><div style="font-weight:bold;">' + applyHighlight(e.title, query) + '</div>' +
+                            '<div style="font-size:0.7rem; color:#64748b;">' + (e.topics || []).slice(0,2).join(', ') + '</div></div>' +
+                            '</div>';
             }
-            document.getElementById('entry-count').textContent = `${filtered.length.toLocaleString()} of ${allEntries.length.toLocaleString()} entries`;
+            document.getElementById('results-list').innerHTML = listHtml;
+
+            // 2. Details Panel
+            var selected = allEntries.find(function(x) { return x._uid === selectedUid; });
+            var details = document.getElementById('details-panel');
+            
+            if (selected) {
+                var btnBulk = checkedUids.size > 0 ? '<button class="btn btn-orange" onclick="exportBulk()">📦 Export ' + checkedUids.size + ' Selected</button>' : '';
+                
+                var html = '<div class="btn-group">' +
+                           '<button class="btn btn-gray" onclick="copyText()">📋 Copy Text</button>' +
+                           '<button class="btn btn-blue" onclick="exportWord([allEntries.find(function(x){return x._uid===\'' + selectedUid + '\'})])">📄 Open in Word</button>' +
+                           btnBulk + '</div>';
+
+                html += '<h1 style="font-size:2.5rem; color:#f59e0b; margin-bottom:10px;">' + applyHighlight(selected.title, query) + '</h1>';
+                
+                if (selected.topics) {
+                    html += '<div class="section-label">Topics</div><div>';
+                    selected.topics.forEach(function(t) { html += '<span class="tag" onclick="quickTopic(\''+t+'\')">' + t + '</span>'; });
+                    html += '</div>';
+                }
+
+                html += '<div class="section-label">Sermon Content</div>';
+                html += '<div class="content-box">' + applyHighlight(selected.words || "", query) + '</div>';
+                
+                details.innerHTML = html;
+            }
+
+            document.getElementById('stat-count').innerText = filtered.length.toLocaleString() + " of " + allEntries.length.toLocaleString() + " sermons";
         }
 
-        function selectSermon(id) { selectedEntryId = id; render(); }
+        // --- EVENT HANDLERS ---
+        function setSelection(id) { selectedUid = id; renderUI(); }
         
-        function toggleSelect(id) {
-            if (multiSelectedIds.has(id)) multiSelectedIds.delete(id);
-            else multiSelectedIds.add(id);
-            render();
+        function toggleCheck(id) {
+            if (checkedUids.has(id)) checkedUids.delete(id);
+            else checkedUids.add(id);
+            renderUI();
         }
 
         function exportBulk() {
-            const selected = allEntries.filter(e => multiSelectedIds.has(e._uid));
-            exportToWord(selected);
+            var items = allEntries.filter(function(x) { return checkedUids.has(x._uid); });
+            exportWord(items);
         }
 
-        function setTopic(t) { document.getElementById('topic-filter').value = t; render(); }
+        function copyText() {
+            var selected = allEntries.find(function(x) { return x._uid === selectedUid; });
+            navigator.clipboard.writeText(selected.title + "\n\n" + selected.words);
+            alert("Sermon copied! You can now paste it into Word or Email.");
+        }
 
-        function updateTopicFilter() {
-            const topics = new Set();
-            allEntries.forEach(e => (e.topics || []).forEach(t => topics.add(t)));
-            const select = document.getElementById('topic-filter');
-            Array.from(topics).sort().forEach(t => {
-                const opt = document.createElement('option');
+        function quickTopic(t) { document.getElementById('topic-filter').value = t; renderUI(); }
+
+        function buildTopicDropdown() {
+            var topics = new Set();
+            allEntries.forEach(function(e) { (e.topics || []).forEach(function(t) { topics.add(t); }); });
+            var select = document.getElementById('topic-filter');
+            Array.from(topics).sort().forEach(function(t) {
+                var opt = document.createElement('option');
                 opt.value = t; opt.textContent = t;
                 select.appendChild(opt);
             });
         }
 
-        document.getElementById('search-input').addEventListener('input', render);
-        document.getElementById('topic-filter').addEventListener('change', render);
+        document.getElementById('search-input').addEventListener('input', renderUI);
+        document.getElementById('topic-filter').addEventListener('change', renderUI);
 
-        loadEverything();
+        startLoading();
     </script>
 </body>
 </html>
