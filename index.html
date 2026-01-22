@@ -241,9 +241,11 @@
         if (!text) return text;
         // Only remove truly problematic control characters, keep \u0014 for formatting
         let result = text.replace(/[\u0000-\u0008\u000B-\u0013\u0015-\u001F\u007F-\u009F]/g, '');
-        // Clean up excessive whitespace but preserve structure
+        // Convert \u0014 to newlines for line breaks
         result = result.replace(/\u0014/g, '\n');
-        return result;
+        // Clean up excessive blank lines but keep paragraph structure
+        result = result.replace(/\n\n+/g, '\n\n');
+        return result.trim();
     }
 
     async function loadData() {
@@ -396,16 +398,19 @@
         const topics = (selected.topics || []).join(', ');
         const scriptures = (selected.scriptures || []).join(', ');
         
+        // Convert newlines to HTML breaks for Word
+        const contentWithBreaks = cleanedContent.replace(/\n/g, '<br>');
+        
         const htmlHeader = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
 body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.5; margin: 1in; }
-h1 { font-size: 16pt; font-weight: bold; margin-top: 0; }
+h1 { font-size: 16pt; font-weight: bold; margin-top: 0; margin-bottom: 12pt; }
 .section { margin: 12pt 0; }
-.label { font-weight: bold; color: #1e40af; }
-.content { white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', monospace; }
+.label { font-weight: bold; color: #1e40af; margin-bottom: 6pt; }
+.content { white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', monospace; font-size: 10pt; }
 </style>
 </head>
 <body>`;
@@ -425,7 +430,7 @@ h1 { font-size: 16pt; font-weight: bold; margin-top: 0; }
 
 <div class="section">
 <div class="label">Content:</div>
-<div class="content">${cleanedContent}</div>
+<div class="content">${contentWithBreaks}</div>
 </div>
 `;
         
