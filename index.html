@@ -110,6 +110,20 @@
         .btn { padding: 10px 20px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; color: white; display: flex; align-items: center; gap: 8px; }
         .btn-blue { background: #2563eb; } .btn-gray { background: #475569; } .btn-orange { background: #d97706; } .btn-red { background: #be123c; }
 
+        /* FILE INDICATOR */
+        .file-indicator {
+            padding: 12px 40px;
+            background: #1e293b;
+            border-top: 1px solid #334155;
+            border-bottom: 1px solid #334155;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            font-family: 'Courier New', monospace;
+        }
+        .file-indicator strong {
+            color: #f59e0b;
+        }
+
         /* EDIT MODE */
         .edit-modal {
             position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; z-index: 5000;
@@ -303,35 +317,40 @@
         
         if(selected) {
             const displayText = translateHighBit(selected.words || "");
+            const [fileKey, fileIdx] = uid.split('-');
+            const fileName = `sermons_${fileKey}.json`;
             
             panel.innerHTML = `
             <div class="action-bar">
-                <button class="btn btn-gray" onclick="copyContent()">📋 Copy</button>
-                <button class="btn btn-blue" onclick="exportWord()">📄 Word</button>
-                <button class="btn btn-orange" onclick="editSermon()">✏️ Edit</button>
-                ${checkedUids.size > 0 ? `<button class="btn btn-orange" onclick="bulkExport()">📦 Export ${checkedUids.size}</button>` : ''}
+                <button class="btn btn-gray" onclick="copyContent()">ðŸ"‹ Copy</button>
+                <button class="btn btn-blue" onclick="exportWord()">ðŸ"„ Word</button>
+                <button class="btn btn-orange" onclick="editSermon()">âœï¸ Edit</button>
+                ${checkedUids.size > 0 ? `<button class="btn btn-orange" onclick="bulkExport()">ðŸ"¦ Export ${checkedUids.size}</button>` : ''}
             </div>
             <div class="scroll-content">
                 <h1 id="export-title" style="color:#f59e0b; margin-bottom:20px;">${highlight(selected.title, query)}</h1>
                 
                 <div style="margin: 20px 0;">
-                    <div class="section-title">📌 Topics</div>
+                    <div class="section-title">ðŸ"Œ Topics</div>
                     <div class="topics-box">
                         ${(selected.topics || []).map(t => `<span class="tag">${t}</span>`).join('')}
                     </div>
                 </div>
 
                 <div style="margin: 20px 0;">
-                    <div class="section-title">📖 Scripture References</div>
+                    <div class="section-title">ðŸ"– Scripture References</div>
                     <div class="scriptures-box">
                         ${(selected.scriptures || []).map(s => `<span class="scripture-ref">${s}</span>`).join('')}
                     </div>
                 </div>
 
                 <div style="margin: 20px 0;">
-                    <div class="section-title">📝 Content</div>
+                    <div class="section-title">ðŸ" Content</div>
                     <div id="sermon-display" style="white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 11pt; color: #e5e7eb;">${highlight(displayText, query)}</div>
                 </div>
+            </div>
+            <div class="file-indicator">
+                <strong>File:</strong> ${fileName} <strong>|</strong> Entry #${fileIdx}
             </div>`;
         }
         renderSidebar(); 
@@ -394,7 +413,7 @@
         selected.topics = document.getElementById('edit-topics').value.split(',').map(t => t.trim()).filter(t => t);
         selected.scriptures = document.getElementById('edit-scriptures').value.split(',').map(t => t.trim()).filter(t => t);
         selected._isDirty = true;
-        alert('✓ Changes saved locally! (Sync to cloud coming soon)');
+        alert('âœ" Changes saved locally! (Sync to cloud coming soon)');
         closeEdit();
         setSelection(selectedUid);
     }
