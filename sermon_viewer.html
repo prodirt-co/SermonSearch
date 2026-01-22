@@ -342,35 +342,43 @@
     <script>
         let allEntries = [];
         let selectedEntry = null;
+        let loadedLetters = new Set(); // Tracks which chunks we've already fetched
 
-        async function loadData() {
+        async function loadData(letter = 'A') {
+            // Don't re-fetch if we already have this letter
+            if (loadedLetters.has(letter)) return;
+
             try {
-                const response = await fetch('./sermons.json');
-                if (!response.ok) throw new Error('File not found');
-                allEntries = await response.json();
+                const response = await fetch(`./sermons_${letter}.json`);
+                if (!response.ok) return; // If file doesn't exist, just skip
                 
-                // Extract unique topics
-                const topicsSet = new Set();
-                allEntries.forEach(entry => {
-                    if (entry.topics) entry.topics.forEach(t => topicsSet.add(t));
-                });
-                const topics = Array.from(topicsSet).sort();
+                const newEntries = await response.json();
+                allEntries = [...allEntries, ...newEntries];
+                loadedLetters.add(letter);
                 
-                // Populate topic filter
-                const filterSelect = document.getElementById('topic-filter');
-                topics.forEach(topic => {
-                    const option = document.createElement('option');
-                    option.value = topic;
-                    option.textContent = topic;
-                    filterSelect.appendChild(option);
-                });
-                
+                updateTopicFilter();
                 render();
             } catch (error) {
-                console.error('Error loading data:', error);
-                document.getElementById('results-list').innerHTML = 
-                    '<div style="color: #ef4444; padding: 1rem;"><p>Error: Could not load sermons.json</p><p style="font-size: 0.875rem; margin-top: 0.5rem;">Make sure sermons.json is in the same folder as this HTML file.</p></div>';
+                console.error(`Error loading sermons_${letter}.json:`, error);
             }
+        }
+
+        function updateTopicFilter() {
+            const topicsSet = new Set();
+            allEntries.forEach(entry => {
+                if (entry.topics) entry.topics.forEach(t => topicsSet.add(t));
+            });
+            const topics = Array.from(topicsSet).sort();
+            
+            const filterSelect = document.getElementById('topic-filter');
+            // Clear current options except the first "All Topics"
+            filterSelect.innerHTML = '<option value="">All Topics</option>';
+            topics.forEach(topic => {
+                const option = document.createElement('option');
+                option.value = topic;
+                option.textContent = topic;
+                filterSelect.appendChild(option);
+            });
         }
 
         function getFilteredEntries() {
@@ -391,76 +399,52 @@
 
         function render() {
             const filtered = getFilteredEntries();
-            
-            // Update results list
             const resultsList = document.getElementById('results-list');
+            
             resultsList.innerHTML = filtered.length === 0 
-                ? '<div style="color: #94a3b8; text-align: center; padding: 2rem;">No sermons found</div>'
-                : filtered.map((entry, idx) => `
-                    <button class="result-item ${selectedEntry === entry ? 'active' : ''}" onclick="selectEntry(${allEntries.indexOf(entry)})">
+                ? '<div style="color: #94a3b8; text-align: center; padding: 2rem;">No sermons found for current search</div>'
+                : filtered.map((entry) => `
+                    <button class="result-item ${selectedEntry === entry ? 'active' : ''}" onclick="selectByTcaid('${entry.tcaid}')">
                         <div class="result-title">${entry.title}</div>
-                        ${entry.topics?.length > 0 ? `<div class="result-topics">${entry.topics.slice(0, 2).join(', ')}</div>` : ''}
+                        ${entry.topics?.length > 0 ? `<div class="result-topics">${entry.topics[0].split('\n')[0]}</div>` : ''}
                     </button>
                 `).join('');
             
-            // Update details panel
             const detailsPanel = document.getElementById('details-panel');
             if (selectedEntry) {
                 detailsPanel.innerHTML = `
                     <h2 class="details-title">${selectedEntry.title}</h2>
-                    
-                    ${selectedEntry.topics?.length > 0 ? `
-                        <div class="section">
-                            <div class="section-title">🏷️ Topics</div>
-                            <div class="tags">
-                                ${selectedEntry.topics.map(topic => `
-                                    <span class="tag" onclick="document.getElementById('topic-filter').value='${topic}'; render();">${topic}</span>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    ${selectedEntry.scriptures?.length > 0 ? `
-                        <div class="section">
-                            <div class="section-title">📖 Scripture References</div>
-                            <div class="tags">
-                                ${selectedEntry.scriptures.map(s => `<span class="scripture">${s}</span>`).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <div class="section">
-                        <div class="section-title">📝 Content</div>
-                        <div class="content-box">${selectedEntry.words || 'No content available'}</div>
-                    </div>
-                    
+                    <div class="section"><div class="section-title">📝 Content</div><div class="content-box">${selectedEntry.words}</div></div>
                     <div class="metadata">
-                        ${selectedEntry.base ? `<div class="metadata-item"><span class="metadata-label">Base:</span>${selectedEntry.base}</div>` : ''}
-                        ${selectedEntry.source ? `<div class="metadata-item"><span class="metadata-label">Source:</span>${selectedEntry.source}</div>` : ''}
-                        ${selectedEntry.tcaid ? `<div class="metadata-item"><span class="metadata-label">ID:</span>${selectedEntry.tcaid}</div>` : ''}
-                        ${selectedEntry.qsid ? `<div class="metadata-item"><span class="metadata-label">QSID:</span>${selectedEntry.qsid}</div>` : ''}
+                        <div class="metadata-item"><span class="metadata-label">ID:</span>${selectedEntry.tcaid}</div>
+                        <div class="metadata-item"><span class="metadata-label">Base:</span>${selectedEntry.base}</div>
                     </div>
                 `;
-            } else {
-                detailsPanel.innerHTML = '<div class="details-empty">Select a sermon to view details</div>';
             }
-            
-            // Update stats
-            document.getElementById('entry-count').textContent = `${filtered.length.toLocaleString()} of ${allEntries.length.toLocaleString()} entries`;
-            document.getElementById('footer').textContent = `Sermon Database • ${filtered.length.toLocaleString()} of ${allEntries.length.toLocaleString()} entries`;
+
+            document.getElementById('entry-count').textContent = `${filtered.length.toLocaleString()} entries loaded`;
         }
 
-        function selectEntry(index) {
-            selectedEntry = allEntries[index];
+        // New function to find entry by ID since indices change as we load more files
+        function selectByTcaid(id) {
+            selectedEntry = allEntries.find(e => e.tcaid === id);
             render();
         }
 
-        // Event listeners
-        document.getElementById('search-input').addEventListener('input', render);
+        // Listen for typing: if user types "B", fetch sermons_B.json
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const char = e.target.value.charAt(0).toUpperCase();
+            if (char && /^[A-Z]$/.test(char)) {
+                loadData(char);
+            }
+            render();
+        });
+
         document.getElementById('topic-filter').addEventListener('change', render);
 
-        // Load data on page load
-        loadData();
+        // Initial Load
+        loadData('A');
     </script>
 </body>
+
 </html>
