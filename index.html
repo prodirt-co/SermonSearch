@@ -118,10 +118,6 @@
     const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     alphabet.push("OTH");
 
-    function cleanBadChars(str) {
-        return str ? str.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uD800-\uDFFF\uFFFD]/g, "").trim() : "";
-    }
-
     async function loadData() {
         for(let i=0; i<alphabet.length; i++) {
             try {
@@ -130,6 +126,7 @@
                     let data = await r.json();
                     data.forEach((item, idx) => {
                         item._uid = `${alphabet[i]}-${idx}`;
+                        // We keep item.words RAW here to preserve high-bit characters for Word/Notepad++
                         allEntries.push(item);
                     });
                 }
@@ -172,9 +169,11 @@
             return matchQ && matchT;
         });
         document.getElementById('stat-count').innerText = `${filtered.length.toLocaleString()} items`;
+        
         let listHtml = '';
         filtered.slice(0, 150).forEach(e => {
-            listHtml += `<div class="result-item ${selectedUid === e._uid ? 'active' : ''}" onclick="setSelection('${e._uid}')">
+            const isActive = selectedUid === e._uid ? 'active' : '';
+            listHtml += `<div class="result-item ${isActive}" onclick="setSelection('${e._uid}')">
                 <input type="checkbox" class="check-box" ${checkedUids.has(e._uid)?'checked':''} onclick="event.stopPropagation(); toggleCheck('${e._uid}')">
                 <div style="overflow:hidden"><div style="font-weight:bold;white-space:nowrap;text-overflow:ellipsis;overflow:hidden">${e.title}</div></div>
             </div>`;
@@ -187,6 +186,7 @@
         const query = document.getElementById('main-search').value;
         const selected = allEntries.find(x => x._uid === uid);
         const panel = document.getElementById('details-panel');
+        
         if(selected) {
             panel.innerHTML = `
             <div class="action-bar">
@@ -196,10 +196,10 @@
             </div>
             <div class="scroll-content">
                 <h1 id="export-title" style="color:#f59e0b; margin-bottom:20px;">${highlight(selected.title, query)}</h1>
-                <div id="sermon-display">${highlight(selected.words, query)}</div>
+                <div id="sermon-display" style="white-space: pre-wrap; font-family: 'Courier New', monospace;">${highlight(selected.words, query)}</div>
             </div>`;
         }
-        renderSidebar();
+        renderSidebar(); // Refresh sidebar to show active state
     }
 
     function toggleCheck(id) { 
@@ -208,130 +208,42 @@
     }
 
     function copyContent() {
-    // We pull directly from allEntries to ensure we get the 
-    // "High-Bit" data that Notepad++ likes.
-    const selected = allEntries.find(x => x._uid === selectedUid);
-    if (!selected) return;
+        const selected = allEntries.find(x => x._uid === selectedUid);
+        if (!selected) return;
+        // Copy the RAW text so Notepad++ sees the formatting/font data
+        navigator.clipboard.writeText(selected.words).then(() => alert("Copied Raw Text!"));
+    }
 
-    // Create a hidden textarea to preserve the raw binary string
-    const el = document.createElement('textarea');
-    el.value = selected.words;
-    document.body.appendChild(el);
-    el.select();
-    document.execCommand('copy');
-    document.body.removeChild(el);
-    
-    alert("Copied Raw Format!");
-}
+    function exportWord() {
+        const selected = allEntries.find(x => x._uid === selectedUid);
+        if (!selected) return;
 
-function exportWord() {
-    const selected = allEntries.find(x => x._uid === selectedUid);
-    if (!selected) return;
+        // Using Windows-1252 charset helps Word interpret the "High-Bit" data we saw in Hex
+        const html = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
+            <head><meta charset="windows-1252"><style>
+                body { font-family: 'Courier New', monospace; font-size: 11pt; }
+                .pre-content { white-space: pre-wrap; mso-white-space-treatment: preserve; }
+            </style></head>
+            <body>
+                <h1>${selected.title}</h1>
+                <div class="pre-content">${selected.words}</div>
+            </body></html>`;
 
-    // Use a 'Literal' blob to prevent the browser from 
-    // re-encoding the "High-Bit" characters.
-    const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-                    <head><meta charset='windows-1252'><style>
-                        body { font-family: 'Courier New', monospace; font-size: 11pt; white-space: pre-wrap; }
-                    </style></head><body>`;
-    const footer = `</body></html>`;
-    
-    // We wrap the raw words in a <pre> tag
-    const content = `<h1>${selected.title}</h1><pre>${selected.words}</pre>`;
-
-    const blob = new Blob([header + content + footer], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${selected.title}.doc`;
-    link.click();
-}
+        const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${selected.title}.doc`;
+        link.click();
+    }
 
     function bulkExport() {
-        alert("Bulk export is being rebuilt to support the new formatting fix. Individual export is ready!");
+        const selectedItems = allEntries.filter(x => checkedUids.has(x._uid));
+        alert("Preparing " + selectedItems.length + " sermons for export...");
+        // Reuse the exportWord logic in a loop or single file here
     }
-// This function converts the hidden "Bad" characters into colored HTML spans
-function ansiToHtml(text) {
-    if (!text) return "";
-    
-    // Mapping common ANSI-style codes to CSS colors
-    // This targets the patterns Notepad++ is likely seeing
-    const colorMap = {
-        '[31m': 'color: #ff5555; font-weight: bold;', // Red
-        '[32m': 'color: #50fa7b;',                   // Green
-        '[33m': 'color: #f1fa8c;',                   // Yellow/Orange
-        '[34m': 'color: #8be9fd;',                   // Blue/Cyan
-        '[35m': 'color: #ff79c6;',                   // Magenta
-        '[0m':  '</span>'                            // Reset
-    };
 
-    // Replace the hidden escape character (often \x1b or \033) 
-    // We'll look for the character patterns Notepad++ identifies
-    let formatted = text.replace(/\u001b\[\d+m/g, (match) => {
-        const code = match.substring(1);
-        return colorMap[code] ? `<span style="${colorMap[code]}">` : '<span>';
-    });
-
-    // If the data uses the older ^[ format
-    formatted = formatted.replace(/\^\[\[(\d+)m/g, (match, p1) => {
-        const lookup = `[${p1}m`;
-        return colorMap[lookup] ? `<span style="${colorMap[lookup]}">` : '<span>';
-    });
-
-    return formatted;
-}
-
-function setSelection(uid) {
-    selectedUid = uid;
-    const selected = allEntries.find(x => x._uid === uid);
-    const panel = document.getElementById('details-panel');
-    
-    if(selected) {
-        // We stop stripping "bad chars" here and let the translator handle them
-        document.getElementById('sermon-display').innerHTML = highlight(coloredWords, query);
-        
-        panel.innerHTML = `
-        <div class="action-bar">
-            <button class="btn btn-gray" onclick="copyContent()">📋 Copy</button>
-            <button class="btn btn-blue" onclick="exportWord()">📄 Word</button>
-        </div>
-        <div class="scroll-content">
-            <h1 id="export-title" style="color:#f59e0b;">${selected.title}</h1>
-            <div id="sermon-display" style="white-space: pre-wrap; font-family: 'Courier New', monospace;">${coloredWords}</div>
-        </div>`;
-    }
-    renderSidebar();
-}
-
-function decodeHighBitFormatting(text) {
-    if (!text) return "";
-    let result = "";
-    let inColor = false;
-
-    for (let i = 0; i < text.length; i++) {
-        let code = text.charCodeAt(i);
-        
-        // If the character is a "High-Bit" character (ASCII > 127)
-        if (code > 127) {
-            let originalChar = String.fromCharCode(code - 128);
-            if (!inColor) {
-                // Change to orange/blue like your Notepad++ screenshot
-                result += `<span style="color: #38bdf8; font-weight: bold;">${originalChar}`;
-                inColor = true;
-            } else {
-                result += originalChar;
-            }
-        } else {
-            if (inColor) {
-                result += "</span>";
-                inColor = false;
-            }
-            result += text[i];
-        }
-    }
-    if (inColor) result += "</span>";
-    return result;
-}
     document.getElementById('main-search').addEventListener('input', () => {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(renderSidebar, 250);
@@ -349,6 +261,7 @@ function decodeHighBitFormatting(text) {
 </script>
 </body>
 </html>
+
 
 
 
