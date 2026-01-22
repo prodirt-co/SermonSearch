@@ -5,315 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sermon Database Viewer</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #1e293b;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #475569;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #64748b;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(to bottom right, #0f172a, #1e293b, #0f172a);
-            color: #e2e8f0;
-            min-height: 100vh;
-        }
-
-        header {
-            position: sticky;
-            top: 0;
-            z-index: 40;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid #334155;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            padding: 1.5rem 0;
-        }
-
-        .header-content {
-            max-width: 90rem;
-            margin: 0 auto;
-            padding: 0 1rem;
-        }
-
-        .header-title {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .header-title h1 {
-            font-size: 2rem;
-            font-weight: bold;
-            color: white;
-        }
-
-        .header-title p {
-            color: #94a3b8;
-            font-size: 0.9rem;
-        }
-
-        .search-bar {
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        .search-bar input,
-        .search-bar select {
-            padding: 0.5rem 1rem;
-            background: #1e293b;
-            color: white;
-            border: 1px solid #475569;
-            border-radius: 0.5rem;
-            transition: all 0.3s;
-            font-size: 0.9rem;
-        }
-
-        .search-bar input:focus,
-        .search-bar select:focus {
-            outline: none;
-            border-color: #d97706;
-            box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
-        }
-
-        .search-bar input {
-            flex: 1;
-            padding-left: 2.5rem;
-            position: relative;
-        }
-
-        .search-bar select {
-            min-width: 150px;
-        }
-
-        main {
-            max-width: 90rem;
-            margin: 0 auto;
-            padding: 2rem 1rem;
-        }
-
-        .container {
-            display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 1.5rem;
-            height: calc(100vh - 250px);
-        }
-
-        .results-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            overflow-y: auto;
-            background: rgba(30, 41, 59, 0.5);
-            padding: 1rem;
-            border-radius: 0.5rem;
-            border: 1px solid #334155;
-        }
-
-        .result-item {
-            padding: 0.75rem;
-            background: #1e293b;
-            border: 1px solid #475569;
-            border-radius: 0.375rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: left;
-            font-size: 0.875rem;
-        }
-
-        .result-item:hover {
-            background: #334155;
-            border-color: #64748b;
-        }
-
-        .result-item.active {
-            background: #b45309;
-            border-color: #d97706;
-            color: white;
-        }
-
-        .result-title {
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .result-topics {
-            font-size: 0.75rem;
-            color: #94a3b8;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .result-item.active .result-topics {
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .details-panel {
-            background: #1e293b;
-            border: 1px solid #475569;
-            border-radius: 0.5rem;
-            padding: 1.5rem;
-            overflow-y: auto;
-            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.3);
-        }
-
-        .details-empty {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: #64748b;
-            text-align: center;
-        }
-
-        .details-title {
-            font-size: 1.75rem;
-            font-weight: bold;
-            margin-bottom: 1.5rem;
-            color: white;
-        }
-
-        .section {
-            margin-bottom: 1.5rem;
-        }
-
-        .section-title {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 600;
-            color: #cbd5e1;
-            margin-bottom: 0.75rem;
-            font-size: 0.9rem;
-        }
-
-        .tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-
-        .tag {
-            padding: 0.375rem 0.75rem;
-            background: #334155;
-            color: #cbd5e1;
-            border-radius: 9999px;
-            font-size: 0.825rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .tag:hover {
-            background: rgba(217, 119, 6, 0.3);
-        }
-
-        .scripture {
-            padding: 0.375rem 0.75rem;
-            background: rgba(37, 99, 235, 0.2);
-            color: #93c5fd;
-            border-radius: 0.25rem;
-            font-size: 0.825rem;
-        }
-
-        .content-box {
-            background: #0f172a;
-            border-radius: 0.375rem;
-            padding: 1rem;
-            max-height: 250px;
-            overflow-y: auto;
-            font-size: 0.875rem;
-            line-height: 1.6;
-            color: #cbd5e1;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-
-        .metadata {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            font-size: 0.75rem;
-            color: #94a3b8;
-            border-top: 1px solid #475569;
-            padding-top: 1rem;
-        }
-
-        .metadata-item {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .metadata-label {
-            color: #64748b;
-            margin-bottom: 0.25rem;
-        }
-
-        footer {
-            border-top: 1px solid #475569;
-            background: rgba(15, 23, 42, 0.5);
-            color: #94a3b8;
-            font-size: 0.875rem;
-            padding: 1rem;
-            text-align: center;
-            margin-top: 2rem;
-        }
-
-        .loading {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 300px;
-            gap: 1rem;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid #334155;
-            border-top: 3px solid #d97706;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        /* [Keep your existing CSS styles exactly as they are] */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(to bottom right, #0f172a, #1e293b, #0f172a); color: #e2e8f0; min-height: 100vh; }
+        header { position: sticky; top: 0; z-index: 40; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #334155; padding: 1.5rem 0; }
+        .header-content { max-width: 90rem; margin: 0 auto; padding: 0 1rem; }
+        .header-title h1 { font-size: 2rem; font-weight: bold; color: white; }
+        .search-bar { display: flex; gap: 0.75rem; margin-top: 1rem; }
+        .search-bar input, .search-bar select { padding: 0.5rem 1rem; background: #1e293b; color: white; border: 1px solid #475569; border-radius: 0.5rem; }
+        .search-bar input { flex: 1; }
+        .container { display: grid; grid-template-columns: 300px 1fr; gap: 1.5rem; height: calc(100vh - 250px); max-width: 90rem; margin: 2rem auto; padding: 0 1rem; }
+        .results-list { overflow-y: auto; background: rgba(30, 41, 59, 0.5); padding: 1rem; border-radius: 0.5rem; border: 1px solid #334155; }
+        .result-item { width: 100%; padding: 0.75rem; background: #1e293b; border: 1px solid #475569; border-radius: 0.375rem; color: white; cursor: pointer; text-align: left; margin-bottom: 0.5rem; }
+        .result-item.active { background: #b45309; border-color: #d97706; }
+        .details-panel { background: #1e293b; border: 1px solid #475569; border-radius: 0.5rem; padding: 1.5rem; overflow-y: auto; }
+        .section { margin-bottom: 1.5rem; }
+        .section-title { font-weight: 600; color: #cbd5e1; margin-bottom: 0.75rem; font-size: 0.9rem; }
+        .tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .tag { padding: 0.375rem 0.75rem; background: #334155; color: #cbd5e1; border-radius: 9999px; font-size: 0.825rem; }
+        .content-box { background: #0f172a; padding: 1rem; border-radius: 0.375rem; white-space: pre-wrap; line-height: 1.6; }
+        .metadata { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.75rem; color: #94a3b8; border-top: 1px solid #475569; padding-top: 1rem; }
+        footer { text-align: center; padding: 1rem; color: #94a3b8; }
     </style>
 </head>
 <body>
     <header>
         <div class="header-content">
             <div class="header-title">
-                <div>
-                    <h1>📚 Sermon Database</h1>
-                    <p id="entry-count">Loading...</p>
-                </div>
+                <h1>📚 Sermon Database</h1>
+                <p id="entry-count">Loading initial data...</p>
             </div>
             <div class="search-bar">
-                <input
-                    type="text"
-                    id="search-input"
-                    placeholder="Search titles, topics, or content..."
-                >
+                <input type="text" id="search-input" placeholder="Search titles, topics, or content...">
                 <select id="topic-filter">
                     <option value="">All Topics</option>
                 </select>
@@ -321,52 +47,48 @@
         </div>
     </header>
 
-    <main>
-        <div class="container">
-            <div class="results-list" id="results-list">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading sermon database...</p>
-                </div>
-            </div>
-            <div class="details-panel" id="details-panel">
-                <div class="details-empty">Select a sermon to view details</div>
-            </div>
+    <div class="container">
+        <div class="results-list" id="results-list"></div>
+        <div class="details-panel" id="details-panel">
+            <div class="details-empty">Select a sermon to view details</div>
         </div>
-    </main>
+    </div>
 
-    <footer id="footer">
-        Sermon Database • Loading...
-    </footer>
+    <footer id="footer">Sermon Database • Ready</footer>
 
     <script>
         let allEntries = [];
         let selectedEntry = null;
-        let loadedLetters = new Set(); 
+        let loadedChunks = new Set();
 
-        // 1. Modified loadData to handle alphabetical chunks
-        async function loadData(letter = 'A') {
-            const upLetter = letter.toUpperCase();
-            if (loadedLetters.has(upLetter)) return;
+        async function loadChunk(chunkName) {
+            const name = chunkName.toUpperCase();
+            if (loadedChunks.has(name)) return;
 
             try {
-                const response = await fetch(`./sermons_${upLetter}.json`);
-                if (!response.ok) return; 
+                const response = await fetch(`./sermons_${name}.json`);
+                if (!response.ok) return;
                 
-                const newEntries = await response.json();
+                const data = await response.json();
+                allEntries = [...allEntries, ...data];
+                loadedChunks.add(name);
                 
-                // Merge new data while keeping the list clean
-                allEntries = [...allEntries, ...newEntries];
-                loadedLetters.add(upLetter);
-                
-                // Re-sort alphabetically to keep the list organized
+                // Sort by title
                 allEntries.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
                 
                 updateTopicFilter();
                 render();
-            } catch (error) {
-                console.error(`Error loading sermons_${upLetter}.json:`, error);
+            } catch (e) {
+                console.error("Failed to load:", name, e);
             }
+        }
+
+        async function loadEverything() {
+            const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+            alphabet.push("OTH"); // Include the non-alphabetic file
+            
+            // Load them all in parallel for speed
+            await Promise.all(alphabet.map(letter => loadChunk(letter)));
         }
 
         function updateTopicFilter() {
@@ -375,126 +97,75 @@
                 if (entry.topics) entry.topics.forEach(t => topicsSet.add(t));
             });
             const topics = Array.from(topicsSet).sort();
-            
             const filterSelect = document.getElementById('topic-filter');
-            const currentVal = filterSelect.value;
+            const current = filterSelect.value;
             filterSelect.innerHTML = '<option value="">All Topics</option>';
-            topics.forEach(topic => {
-                const option = document.createElement('option');
-                option.value = topic;
-                option.textContent = topic;
-                filterSelect.appendChild(option);
+            topics.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t; opt.textContent = t;
+                filterSelect.appendChild(opt);
             });
-            filterSelect.value = currentVal;
-        }
-
-        function getFilteredEntries() {
-            const searchQuery = document.getElementById('search-input').value.toLowerCase();
-            const topicFilter = document.getElementById('topic-filter').value;
-
-            return allEntries.filter(entry => {
-                const matchesSearch = 
-                    (entry.title?.toLowerCase().includes(searchQuery)) ||
-                    (entry.words?.toLowerCase().includes(searchQuery)) ||
-                    (entry.topics?.some(t => t.toLowerCase().includes(searchQuery)));
-                
-                const matchesTopic = !topicFilter || entry.topics?.includes(topicFilter);
-                
-                return matchesSearch && matchesTopic;
-            });
+            filterSelect.value = current;
         }
 
         function render() {
-            const filtered = getFilteredEntries();
-            const resultsList = document.getElementById('results-list');
-            
-            // Fix: Re-implemented full UI pieces from your original version
-            resultsList.innerHTML = filtered.length === 0 
-                ? '<div style="color: #94a3b8; text-align: center; padding: 2rem;">No sermons found</div>'
-                : filtered.map((entry) => `
-                    <button class="result-item ${selectedEntry === entry ? 'active' : ''}" onclick="selectByTcaid('${entry.tcaid}')">
-                        <div class="result-title">${entry.title}</div>
-                        ${entry.topics?.length > 0 ? `<div class="result-topics">${entry.topics.slice(0, 2).join(', ')}</div>` : ''}
-                    </button>
-                `).join('');
-            
-            const detailsPanel = document.getElementById('details-panel');
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const topic = document.getElementById('topic-filter').value;
+
+            const filtered = allEntries.filter(e => {
+                const matchesSearch = !query || 
+                    e.title?.toLowerCase().includes(query) || 
+                    e.words?.toLowerCase().includes(query);
+                const matchesTopic = !topic || e.topics?.includes(topic);
+                return matchesSearch && matchesTopic;
+            });
+
+            const list = document.getElementById('results-list');
+            list.innerHTML = filtered.map(e => `
+                <button class="result-item ${selectedEntry?.tcaid === e.tcaid ? 'active' : ''}" 
+                        onclick="selectSermon('${e.tcaid}')">
+                    <div class="result-title">${e.title}</div>
+                    <div class="result-topics">${(e.topics || []).slice(0,2).join(', ')}</div>
+                </button>
+            `).join('');
+
+            const details = document.getElementById('details-panel');
             if (selectedEntry) {
-                detailsPanel.innerHTML = `
+                details.innerHTML = `
                     <h2 class="details-title">${selectedEntry.title}</h2>
-                    
-                    ${selectedEntry.topics?.length > 0 ? `
-                        <div class="section">
-                            <div class="section-title">🏷️ Topics</div>
-                            <div class="tags">
-                                ${selectedEntry.topics.map(topic => `
-                                    <span class="tag" onclick="document.getElementById('topic-filter').value='${topic}'; render();">${topic}</span>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    ${selectedEntry.scriptures?.length > 0 ? `
-                        <div class="section">
-                            <div class="section-title">📖 Scripture References</div>
-                            <div class="tags">
-                                ${selectedEntry.scriptures.map(s => `<span class="scripture">${s}</span>`).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <div class="section">
-                        <div class="section-title">📝 Content</div>
-                        <div class="content-box">${selectedEntry.words || 'No content available'}</div>
+                    <div class="section"><div class="section-title">🏷️ Topics</div>
+                        <div class="tags">${(selectedEntry.topics || []).map(t => `<span class="tag">${t}</span>`).join('')}</div>
                     </div>
-                    
+                    <div class="section"><div class="section-title">📝 Content</div>
+                        <div class="content-box">${selectedEntry.words || ''}</div>
+                    </div>
                     <div class="metadata">
-                        ${selectedEntry.base ? `<div class="metadata-item"><span class="metadata-label">Base:</span>${selectedEntry.base}</div>` : ''}
-                        ${selectedEntry.source ? `<div class="metadata-item"><span class="metadata-label">Source:</span>${selectedEntry.source}</div>` : ''}
-                        ${selectedEntry.tcaid ? `<div class="metadata-item"><span class="metadata-label">ID:</span>${selectedEntry.tcaid}</div>` : ''}
-                        ${selectedEntry.qsid ? `<div class="metadata-item"><span class="metadata-label">QSID:</span>${selectedEntry.qsid}</div>` : ''}
-                    </div>
-                `;
-            } else {
-                detailsPanel.innerHTML = '<div class="details-empty">Select a sermon to view details</div>';
+                        <div>ID: ${selectedEntry.tcaid || ''}</div>
+                        <div>Base: ${selectedEntry.base || ''}</div>
+                    </div>`;
             }
 
-            // Restore entry count formatting from your local version
             document.getElementById('entry-count').textContent = `${filtered.length.toLocaleString()} of ${allEntries.length.toLocaleString()} entries`;
-            document.getElementById('footer').textContent = `Sermon Database • ${filtered.length.toLocaleString()} of ${allEntries.length.toLocaleString()} entries`;
         }
 
-        // Search by unique ID instead of array index
-        function selectByTcaid(id) {
+        function selectSermon(id) {
             selectedEntry = allEntries.find(e => e.tcaid === id);
             render();
         }
 
-        async function loadAllSermons() {
-    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-    // This runs all 26 fetches at once
-    await Promise.all(alphabet.map(letter => loadData(letter)));
-    console.log("All sermon chunks loaded.");
-}
-
+        // Listen for typing: triggers OTH load for numbers/symbols
         document.getElementById('search-input').addEventListener('input', (e) => {
-            const char = e.target.value.charAt(0).toUpperCase();
-            if (char && /^[A-Z]$/.test(char)) {
-                loadData(char); // Fetch the new JSON chunk as the user types
+            const firstChar = e.target.value.charAt(0).toUpperCase();
+            if (firstChar && !/^[A-Z]$/.test(firstChar)) {
+                loadChunk('OTH');
             }
             render();
         });
 
         document.getElementById('topic-filter').addEventListener('change', render);
 
-        // Initial Load
-        loadData('A').then(() => {
-    // Then quietly load the rest of the 16,000 items in the background
-    loadAllSermons();
-});
+        // Initial Start
+        loadChunk('A').then(() => loadEverything());
     </script>
 </body>
-
 </html>
-
-
