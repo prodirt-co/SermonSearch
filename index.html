@@ -233,23 +233,55 @@
             navigator.clipboard.writeText(text).then(() => alert("Copied!"));
         }
 
-        function exportWord(items) {
-            const html = `<html><head><meta charset="utf-8"></head><body style="font-family:'Times New Roman',serif; white-space:pre-wrap; padding:1in;">
-                ${items.map(i => `<h2>${i.title}</h2><div style="tab-size:4;">${i.words}</div><br style="page-break-before:always;">`).join('')}
-            </body></html>`;
-            const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = items.length === 1 ? `${items[0].title}.doc` : "Sermons.doc";
-            link.click();
-        }
+        function exportToWord(items) {
+    if (!items.length) return;
 
-        function bulkExport() { exportWord(allEntries.filter(x => checkedUids.has(x._uid))); }
+    const htmlHeader = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+        <head><meta charset="utf-8">
+        <style>
+            body { font-family: 'Times New Roman', serif; line-height: 1.5; padding: 1in; }
+            h1 { color: #2b5797; border-bottom: 1px solid #ccc; }
+            .sermon-body { white-space: pre-wrap; margin-top: 20px; font-size: 12pt; }
+        </style>
+        </head>
+        <body>`;
+    
+    const htmlFooter = `</body></html>`;
 
-        document.getElementById('main-search').addEventListener('input', () => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(renderSidebar, 250); // Debounce typing
-        });
+    let combinedContent = items.map(item => {
+        // This is the secret sauce: 
+        // Converting raw text into HTML-friendly formatting that Word respects
+        const formattedWords = item.words
+            .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;') // Convert tabs to spaces
+            .replace(/\n/g, '<br>'); // Convert newlines to break tags
+
+        return `
+            <h1>${item.title}</h1>
+            <div class="sermon-body">${formattedWords}</div>
+            <br style="page-break-before:always;">`;
+    }).join('');
+
+    const fullHtml = htmlHeader + combinedContent + htmlFooter;
+    
+    // Create the file download
+    const blob = new Blob(['\ufeff', fullHtml], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = items.length === 1 ? `${items[0].title}.doc` : `Sermon_Batch_Export.doc`;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function bulkExport() {
+    const selectedItems = allEntries.filter(x => checkedUids.has(x._uid));
+    exportToWord(selectedItems);
+}
 
         document.getElementById('topic-search-box').addEventListener('input', (e) => {
             let val = e.target.value.toLowerCase();
@@ -264,3 +296,4 @@
     </script>
 </body>
 </html>
+
