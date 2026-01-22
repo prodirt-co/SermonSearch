@@ -130,7 +130,6 @@
                     let data = await r.json();
                     data.forEach((item, idx) => {
                         item._uid = `${alphabet[i]}-${idx}`;
-                        item.words = cleanBadChars(item.words);
                         allEntries.push(item);
                     });
                 }
@@ -350,6 +349,7 @@ function decodeHighBitFormatting(text) {
 </script>
 </body>
 </html>
+
 
 
 
