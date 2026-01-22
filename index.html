@@ -239,10 +239,10 @@
 
     function cleanText(text) {
         if (!text) return text;
-        // Remove all Unicode control characters and junk
-        let result = text.replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ');
-        // Clean up multiple spaces and normalize whitespace
-        result = result.replace(/\s+/g, ' ').trim();
+        // Only remove truly problematic control characters, keep \u0014 for formatting
+        let result = text.replace(/[\u0000-\u0008\u000B-\u0013\u0015-\u001F\u007F-\u009F]/g, '');
+        // Clean up excessive whitespace but preserve structure
+        result = result.replace(/\u0014/g, '\n');
         return result;
     }
 
@@ -316,7 +316,7 @@
         const panel = document.getElementById('details-panel');
         
         if(selected) {
-            const displayText = selected.words || "";
+            const displayText = cleanText(selected.words || "");
             const [fileKey, fileIdx] = uid.split('-');
             const fileName = `sermons_${fileKey}.json`;
             
