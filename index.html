@@ -116,12 +116,13 @@
     </div>
 
     <script>
-        // Global variables must be declared here to be accessible by all functions
+        // 1. Initialization - Variables must be exactly these names
         let allEntries = [];
-        let selectedEntryId = null;
-        let loadedChunks = new Set(); // Fixes the ReferenceError
+        let selectedEntryId = null; 
+        let loadedChunks = new Set();
         let chunksLoadedCount = 0;
-        const totalChunks = 27; // A-Z (26) + OTH (1)
+        let isStarted = false; 
+        const totalChunks = 27; // A-Z + OTH
 
         async function loadChunk(chunkName) {
             const name = chunkName.toUpperCase();
@@ -131,23 +132,23 @@
                 const response = await fetch(`./sermons_${name}.json`);
                 if (response.ok) {
                     const data = await response.json();
-                    
-                    // Assign Unique IDs for selection stability
                     data.forEach((item, index) => {
                         item._uid = `${name}-${index}`;
                     });
-
                     allEntries = [...allEntries, ...data];
                     loadedChunks.add(name);
                 }
             } catch (e) {
-                console.warn("Error loading chunk:", name, e);
+                console.warn(`File missing: sermons_${name}.json`);
             } finally {
                 updateProgress(); 
             }
         }
 
         function updateProgress() {
+            // Guard: Never let the count exceed the total chunks
+            if (chunksLoadedCount >= totalChunks) return;
+            
             chunksLoadedCount++;
             const percentage = Math.round((chunksLoadedCount / totalChunks) * 100);
             
@@ -155,7 +156,7 @@
             const status = document.getElementById('loading-status');
             
             if (bar) bar.style.width = percentage + '%';
-            if (status) status.textContent = `${percentage}% - Loaded ${chunksLoadedCount} of ${totalChunks} files`;
+            if (status) status.textContent = `${percentage}% - Processed ${chunksLoadedCount} of ${totalChunks} alphabet files`;
 
             if (chunksLoadedCount === totalChunks) {
                 finishLoading();
@@ -163,28 +164,19 @@
         }
 
         function finishLoading() {
-            // Final Sort alphabetical by title
             allEntries.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
-            
             updateTopicFilter();
             render();
 
             const overlay = document.getElementById('loading-overlay');
             const wrapper = document.getElementById('main-wrapper');
             
-            // Fade out overlay and reveal content
             if (overlay) overlay.style.opacity = '0';
             if (wrapper) {
                 wrapper.style.display = 'block';
-                // Small delay to ensure display:block is registered before opacity change
-                setTimeout(() => {
-                    wrapper.style.opacity = '1';
-                }, 50);
+                setTimeout(() => { wrapper.style.opacity = '1'; }, 50);
             }
-            
-            setTimeout(() => {
-                if (overlay) overlay.style.display = 'none';
-            }, 600);
+            setTimeout(() => { if (overlay) overlay.style.display = 'none'; }, 600);
         }
 
         function updateTopicFilter() {
@@ -194,6 +186,8 @@
             });
             const topics = Array.from(topicsSet).sort();
             const filterSelect = document.getElementById('topic-filter');
+            if (!filterSelect) return;
+            
             const current = filterSelect.value;
             filterSelect.innerHTML = '<option value="">All Topics</option>';
             topics.forEach(t => {
@@ -205,8 +199,8 @@
         }
 
         function render() {
-            const query = document.getElementById('search-input').value.toLowerCase();
-            const topic = document.getElementById('topic-filter').value;
+            const query = document.getElementById('search-input')?.value.toLowerCase() || "";
+            const topic = document.getElementById('topic-filter')?.value || "";
 
             const filtered = allEntries.filter(e => {
                 const matchesSearch = !query || 
@@ -217,54 +211,41 @@
             });
 
             const list = document.getElementById('results-list');
-            const currentScroll = list.scrollTop;
-            
-            list.innerHTML = filtered.length === 0 
-                ? '<div style="color: #94a3b8; text-align: center; padding: 2rem;">No sermons found</div>'
-                : filtered.map(e => `
+            if (list) {
+                const currentScroll = list.scrollTop;
+                list.innerHTML = filtered.map(e => `
                     <button class="result-item ${selectedEntryId === e._uid ? 'active' : ''}" 
                             onclick="selectSermon('${e._uid}')">
                         <div class="result-title">${e.title}</div>
                         <div class="result-topics">${(e.topics || []).slice(0, 2).join(', ')}</div>
                     </button>
                 `).join('');
-
-            list.scrollTop = currentScroll;
+                list.scrollTop = currentScroll;
+            }
 
             const details = document.getElementById('details-panel');
             const selectedEntry = allEntries.find(e => e._uid === selectedEntryId);
 
-            if (selectedEntry) {
+            if (details && selectedEntry) {
                 details.innerHTML = `
                     <h2 class="details-title">${selectedEntry.title}</h2>
-                    ${(selectedEntry.topics && selectedEntry.topics.length > 0) ? `
-                        <div class="section">
-                            <div class="section-title">🏷️ Topics</div>
-                            <div class="tags">
-                                ${selectedEntry.topics.map(t => `<span class="tag" onclick="setTopic('${t}')">${t}</span>`).join('')}
-                            </div>
-                        </div>` : ''}
-                    ${(selectedEntry.scriptures && selectedEntry.scriptures.length > 0) ? `
-                        <div class="section">
-                            <div class="section-title">📖 Scripture References</div>
-                            <div class="tags">
-                                ${selectedEntry.scriptures.map(s => `<span class="scripture">${s}</span>`).join('')}
-                            </div>
-                        </div>` : ''}
-                    <div class="section">
-                        <div class="section-title">📝 Content</div>
-                        <div class="content-box">${selectedEntry.words || 'No content available'}</div>
+                    <div class="section"><div class="section-title">🏷️ Topics</div>
+                        <div class="tags">${(selectedEntry.topics || []).map(t => `<span class="tag" onclick="setTopic('${t}')">${t}</span>`).join('')}</div>
+                    </div>
+                    <div class="section"><div class="section-title">📖 Scriptures</div>
+                        <div class="tags">${(selectedEntry.scriptures || []).map(s => `<span class="scripture">${s}</span>`).join('')}</div>
+                    </div>
+                    <div class="section"><div class="section-title">📝 Content</div>
+                        <div class="content-box">${selectedEntry.words || ''}</div>
                     </div>
                     <div class="metadata">
                         <div class="metadata-item"><span class="metadata-label">Base:</span>${selectedEntry.base || ''}</div>
-                        <div class="metadata-item"><span class="metadata-label">Source:</span>${selectedEntry.source || ''}</div>
                         <div class="metadata-item"><span class="metadata-label">ID:</span>${selectedEntry.tcaid ?? ''}</div>
                     </div>`;
-            } else {
-                details.innerHTML = '<div class="details-empty">Select a sermon to view details</div>';
             }
 
-            document.getElementById('entry-count').textContent = `${filtered.length.toLocaleString()} of ${allEntries.length.toLocaleString()} entries`;
+            const countEl = document.getElementById('entry-count');
+            if (countEl) countEl.textContent = `${filtered.length.toLocaleString()} of ${allEntries.length.toLocaleString()} entries`;
         }
 
         function selectSermon(uid) {
@@ -272,25 +253,31 @@
             render();
         }
 
-        function setTopic(topicName) {
-            document.getElementById('topic-filter').value = topicName;
+        function setTopic(t) {
+            document.getElementById('topic-filter').value = t;
             render();
         }
 
         async function loadEverything() {
+            // Guard: prevent the function from running twice
+            if (isStarted) return;
+            isStarted = true;
+
             const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
             alphabet.push("OTH");
             await Promise.all(alphabet.map(letter => loadChunk(letter)));
         }
 
+        // Event listeners
         document.getElementById('search-input').addEventListener('input', render);
         document.getElementById('topic-filter').addEventListener('change', render);
 
-        // Initial Load Start
+        // Run the loader
         loadEverything();
     </script>
 </body>
 </html>
+
 
 
 
