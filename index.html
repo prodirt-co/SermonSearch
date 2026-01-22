@@ -116,84 +116,76 @@
     </div>
 
     <script>
+        // Global variables must be declared here to be accessible by all functions
         let allEntries = [];
-    let loadedChunks = new Set();
-    let chunksLoadedCount = 0;
-    const totalChunks = 27; // A-Z + OTH
+        let selectedEntryId = null;
+        let loadedChunks = new Set(); // Fixes the ReferenceError
+        let chunksLoadedCount = 0;
+        const totalChunks = 27; // A-Z (26) + OTH (1)
 
-    async function loadChunk(chunkName) {
-        const name = chunkName.toUpperCase();
-        if (loadedChunks.has(name)) return;
+        async function loadChunk(chunkName) {
+            const name = chunkName.toUpperCase();
+            if (loadedChunks.has(name)) return;
 
-        try {
-            const response = await fetch(`./sermons_${name}.json`);
-            if (response.ok) {
-                const data = await response.json();
-                
-                // Assign unique internal ID for stable selection
-                data.forEach((item, index) => {
-                    item._uid = `${name}-${index}`;
-                });
+            try {
+                const response = await fetch(`./sermons_${name}.json`);
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Assign Unique IDs for selection stability
+                    data.forEach((item, index) => {
+                        item._uid = `${name}-${index}`;
+                    });
 
-                allEntries = [...allEntries, ...data];
-                loadedChunks.add(name);
+                    allEntries = [...allEntries, ...data];
+                    loadedChunks.add(name);
+                }
+            } catch (e) {
+                console.warn("Error loading chunk:", name, e);
+            } finally {
+                updateProgress(); 
             }
-        } catch (e) {
-            console.warn(`Could not load sermons_${name}.json:`, e);
-        } finally {
-            // This ensures the counter increments even if the file is missing
-            updateProgress(); 
         }
-    }
 
-    function updateProgress() {
-        chunksLoadedCount++;
-        const percentage = Math.round((chunksLoadedCount / totalChunks) * 100);
-        
-        const bar = document.getElementById('progress-bar');
-        const status = document.getElementById('loading-status');
-        
-        if (bar) bar.style.width = percentage + '%';
-        if (status) status.textContent = `${percentage}% - Processed ${chunksLoadedCount} of ${totalChunks} alphabet files`;
+        function updateProgress() {
+            chunksLoadedCount++;
+            const percentage = Math.round((chunksLoadedCount / totalChunks) * 100);
+            
+            const bar = document.getElementById('progress-bar');
+            const status = document.getElementById('loading-status');
+            
+            if (bar) bar.style.width = percentage + '%';
+            if (status) status.textContent = `${percentage}% - Loaded ${chunksLoadedCount} of ${totalChunks} files`;
 
-        if (chunksLoadedCount === totalChunks) {
-            finishLoading();
+            if (chunksLoadedCount === totalChunks) {
+                finishLoading();
+            }
         }
-    }
 
-    function finishLoading() {
-        // Sort the entire database once everything is in memory
-        allEntries.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
-        
-        updateTopicFilter();
-        render();
+        function finishLoading() {
+            // Final Sort alphabetical by title
+            allEntries.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+            
+            updateTopicFilter();
+            render();
 
-        // Reveal the UI
-        const overlay = document.getElementById('loading-overlay');
-        const wrapper = document.getElementById('main-wrapper');
-        
-        overlay.style.opacity = '0';
-        wrapper.style.display = 'block'; // Ensure wrapper is visible
-        
-        setTimeout(() => {
-            overlay.style.display = 'none';
-            wrapper.style.opacity = '1';
-        }, 500);
-    }
-
-    async function loadEverything() {
-        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-        alphabet.push("OTH");
-        
-        // Trigger all fetches simultaneously
-        await Promise.all(alphabet.map(letter => loadChunk(letter)));
-    }
-
-    // Call this at the very bottom of your script
-    loadEverything();
-
-    // Replace your start call at the bottom with just this:
-    loadEverything();
+            const overlay = document.getElementById('loading-overlay');
+            const wrapper = document.getElementById('main-wrapper');
+            
+            // Fade out overlay and reveal content
+            if (overlay) overlay.style.opacity = '0';
+            if (wrapper) {
+                wrapper.style.display = 'block';
+                // Small delay to ensure display:block is registered before opacity change
+                setTimeout(() => {
+                    wrapper.style.opacity = '1';
+                }, 50);
+            }
+            
+            setTimeout(() => {
+                if (overlay) overlay.style.display = 'none';
+            }, 600);
+        }
 
         function updateTopicFilter() {
             const topicsSet = new Set();
@@ -225,19 +217,18 @@
             });
 
             const list = document.getElementById('results-list');
-            
-            // FIX 2: Remember exactly where the user was scrolled
             const currentScroll = list.scrollTop;
             
-            list.innerHTML = filtered.map(e => `
-                <button class="result-item ${selectedEntryId === e._uid ? 'active' : ''}" 
-                        onclick="selectSermon('${e._uid}')">
-                    <div class="result-title">${e.title}</div>
-                    <div class="result-topics">${(e.topics || []).slice(0,2).join(', ')}</div>
-                </button>
-            `).join('');
+            list.innerHTML = filtered.length === 0 
+                ? '<div style="color: #94a3b8; text-align: center; padding: 2rem;">No sermons found</div>'
+                : filtered.map(e => `
+                    <button class="result-item ${selectedEntryId === e._uid ? 'active' : ''}" 
+                            onclick="selectSermon('${e._uid}')">
+                        <div class="result-title">${e.title}</div>
+                        <div class="result-topics">${(e.topics || []).slice(0, 2).join(', ')}</div>
+                    </button>
+                `).join('');
 
-            // FIX 3: Put the scroll bar back where it was immediately
             list.scrollTop = currentScroll;
 
             const details = document.getElementById('details-panel');
@@ -246,42 +237,61 @@
             if (selectedEntry) {
                 details.innerHTML = `
                     <h2 class="details-title">${selectedEntry.title}</h2>
-                    <div class="section"><div class="section-title">🏷️ Topics</div>
-                        <div class="tags">${(selectedEntry.topics || []).map(t => `<span class="tag">${t}</span>`).join('')}</div>
-                    </div>
-                    <div class="section"><div class="section-title">📖 Scripture</div>
-                        <div class="tags">${(selectedEntry.scriptures || []).map(s => `<span class="scripture">${s}</span>`).join('')}</div>
-                    </div>
-                    <div class="section"><div class="section-title">📝 Content</div>
-                        <div class="content-box">${selectedEntry.words || ''}</div>
+                    ${(selectedEntry.topics && selectedEntry.topics.length > 0) ? `
+                        <div class="section">
+                            <div class="section-title">🏷️ Topics</div>
+                            <div class="tags">
+                                ${selectedEntry.topics.map(t => `<span class="tag" onclick="setTopic('${t}')">${t}</span>`).join('')}
+                            </div>
+                        </div>` : ''}
+                    ${(selectedEntry.scriptures && selectedEntry.scriptures.length > 0) ? `
+                        <div class="section">
+                            <div class="section-title">📖 Scripture References</div>
+                            <div class="tags">
+                                ${selectedEntry.scriptures.map(s => `<span class="scripture">${s}</span>`).join('')}
+                            </div>
+                        </div>` : ''}
+                    <div class="section">
+                        <div class="section-title">📝 Content</div>
+                        <div class="content-box">${selectedEntry.words || 'No content available'}</div>
                     </div>
                     <div class="metadata">
-                        <div>Base: ${selectedEntry.base || ''}</div>
-                        <div>ID: ${selectedEntry.tcaid ?? ''}</div>
+                        <div class="metadata-item"><span class="metadata-label">Base:</span>${selectedEntry.base || ''}</div>
+                        <div class="metadata-item"><span class="metadata-label">Source:</span>${selectedEntry.source || ''}</div>
+                        <div class="metadata-item"><span class="metadata-label">ID:</span>${selectedEntry.tcaid ?? ''}</div>
                     </div>`;
+            } else {
+                details.innerHTML = '<div class="details-empty">Select a sermon to view details</div>';
             }
 
             document.getElementById('entry-count').textContent = `${filtered.length.toLocaleString()} of ${allEntries.length.toLocaleString()} entries`;
         }
 
         function selectSermon(uid) {
-            selectedEntryId = uid; // Save the unique ID
+            selectedEntryId = uid;
             render();
         }
 
-        document.getElementById('search-input').addEventListener('input', (e) => {
-            const char = e.target.value.charAt(0).toUpperCase();
-            if (char && !/^[A-Z]$/.test(char)) loadChunk('OTH');
+        function setTopic(topicName) {
+            document.getElementById('topic-filter').value = topicName;
             render();
-        });
+        }
 
+        async function loadEverything() {
+            const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+            alphabet.push("OTH");
+            await Promise.all(alphabet.map(letter => loadChunk(letter)));
+        }
+
+        document.getElementById('search-input').addEventListener('input', render);
         document.getElementById('topic-filter').addEventListener('change', render);
 
-        // Start loading
-        loadChunk('A').then(() => loadEverything());
+        // Initial Load Start
+        loadEverything();
     </script>
 </body>
 </html>
+
 
 
 
