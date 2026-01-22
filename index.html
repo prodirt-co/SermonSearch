@@ -233,54 +233,46 @@
             navigator.clipboard.writeText(text).then(() => alert("Copied!"));
         }
 
-        function exportToWord(items) {
+        function exportWord(items) {
     if (!items.length) return;
 
-    const htmlHeader = `
-        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-        <head><meta charset="utf-8">
-        <style>
-            body { font-family: 'Times New Roman', serif; line-height: 1.5; padding: 1in; }
-            h1 { color: #2b5797; border-bottom: 1px solid #ccc; }
-            .sermon-body { white-space: pre-wrap; margin-top: 20px; font-size: 12pt; }
-        </style>
-        </head>
-        <body>`;
-    
-    const htmlFooter = `</body></html>`;
+    // 1. Setup the Word Document Wrapper
+    const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                    <head><meta charset='utf-8'><style>
+                        body { font-family: 'Courier New', monospace; font-size: 11pt; line-height: 1.2; padding: 1in; }
+                        .sermon-title { font-family: 'Arial', sans-serif; font-size: 18pt; font-weight: bold; color: #2b5797; border-bottom: 2px solid #2b5797; margin-bottom: 20px; }
+                        pre { white-space: pre-wrap; word-wrap: break-word; tab-size: 4; }
+                    </style></head><body>`;
+    const footer = `</body></html>`;
 
-    let combinedContent = items.map(item => {
-        // This is the secret sauce: 
-        // Converting raw text into HTML-friendly formatting that Word respects
-        const formattedWords = item.words
-            .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;') // Convert tabs to spaces
-            .replace(/\n/g, '<br>'); // Convert newlines to break tags
+    // 2. Map items to HTML structure
+    let content = items.map(item => {
+        // We create a temporary hidden element to "render" the text just like the browser does
+        // This ensures tabs and line breaks are preserved by the browser's engine before export
+        const tempDiv = document.createElement('div');
+        tempDiv.innerText = item.words; 
+        const formattedWords = tempDiv.innerHTML; // This turns newlines into browser-safe formatting
 
         return `
-            <h1>${item.title}</h1>
-            <div class="sermon-body">${formattedWords}</div>
-            <br style="page-break-before:always;">`;
+            <div class="sermon-title">${item.title}</div>
+            <pre>${formattedWords}</pre>
+            <br style="page-break-before:always;">
+        `;
     }).join('');
 
-    const fullHtml = htmlHeader + combinedContent + htmlFooter;
-    
-    // Create the file download
-    const blob = new Blob(['\ufeff', fullHtml], { type: 'application/msword' });
+    // 3. Create the Blob from the rendered HTML
+    const blob = new Blob(['\ufeff', header + content + footer], { type: 'application/msword' });
     const url = URL.createObjectURL(blob);
+    
     const link = document.createElement('a');
     link.href = url;
-    link.download = items.length === 1 ? `${items[0].title}.doc` : `Sermon_Batch_Export.doc`;
+    link.download = items.length === 1 ? `${items[0].title.substring(0,30)}.doc` : "Sermon_Collection.doc";
     
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function bulkExport() {
-    const selectedItems = allEntries.filter(x => checkedUids.has(x._uid));
-    exportToWord(selectedItems);
 }
 
         document.getElementById('topic-search-box').addEventListener('input', (e) => {
@@ -296,4 +288,5 @@ function bulkExport() {
     </script>
 </body>
 </html>
+
 
