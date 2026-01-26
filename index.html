@@ -325,6 +325,17 @@
             const matchB = !activeBase || (e.base === activeBase);
             return matchQ && matchT && matchB;
         });
+        
+        if (activeTopic) {
+            console.log('Looking for topic:', activeTopic);
+            console.log('Sample entry topics:', allEntries.slice(0, 5).map(e => e.topics));
+            const matching = allEntries.filter(e => e.topics && e.topics.some(t => {
+                const clean = t.replace(/\n/g, ' ').trim();
+                return clean === activeTopic;
+            }));
+            console.log('Entries with this topic:', matching.length);
+        }
+        
         console.log('Sidebar filter - query:', query, 'topic:', activeTopic, 'base:', activeBase, 'results:', filtered.length);
         document.getElementById('stat-count').textContent = `${filtered.length.toLocaleString()} items`;
         
