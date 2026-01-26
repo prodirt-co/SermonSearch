@@ -261,7 +261,10 @@
         let topics = new Set();
         let bases = new Set();
         allEntries.forEach(e => {
-            (e.topics || []).forEach(t => topics.add(t));
+            (e.topics || []).forEach(t => {
+                let cleanTopic = t.replace(/\n/g, ' ').trim();
+                if (cleanTopic) topics.add(cleanTopic);
+            });
             if(e.base) {
                 let baseStr = e.base.toString().trim();
                 bases.add(baseStr);
@@ -270,21 +273,23 @@
         
         const topicTarget = document.getElementById('topic-list-target');
         topicTarget.innerHTML = '';
-        Array.from(topics).sort().forEach(t => {
+        const topicArray = Array.from(topics).sort();
+        topicArray.forEach(t => {
             let d = document.createElement('div');
             d.className = 'dropdown-item';
-            d.innerText = t;
-            d.onclick = () => { activeTopic = t; document.getElementById('topic-trigger').innerText = t; toggleDropdown('topic'); renderSidebar(); };
+            d.textContent = t;
+            d.onclick = () => { activeTopic = t; document.getElementById('topic-trigger').textContent = t; toggleDropdown('topic'); renderSidebar(); };
             topicTarget.appendChild(d);
         });
 
         const baseTarget = document.getElementById('base-list-target');
         baseTarget.innerHTML = '';
-        Array.from(bases).sort().forEach(b => {
+        const baseArray = Array.from(bases).sort();
+        baseArray.forEach(b => {
             let d = document.createElement('div');
             d.className = 'dropdown-item';
-            d.innerText = b;
-            d.onclick = () => { activeBase = b; document.getElementById('base-trigger').innerText = b; toggleDropdown('base'); renderSidebar(); };
+            d.textContent = b;
+            d.onclick = () => { activeBase = b; document.getElementById('base-trigger').textContent = b; toggleDropdown('base'); renderSidebar(); };
             baseTarget.appendChild(d);
         });
     }
@@ -512,20 +517,28 @@ h1 { font-size: 16pt; font-weight: bold; margin-top: 0; margin-bottom: 12pt; }
         searchTimeout = setTimeout(renderSidebar, 250);
     });
 
+    let topicSearchTimeout = null;
     document.getElementById('topic-search-box').addEventListener('input', (e) => {
-        let val = e.target.value.toLowerCase();
-        const items = document.querySelectorAll('#topic-list-target > .dropdown-item');
-        for (let item of items) {
-            item.style.display = item.innerText.toLowerCase().includes(val) ? 'block' : 'none';
-        }
+        clearTimeout(topicSearchTimeout);
+        const val = e.target.value.toLowerCase();
+        topicSearchTimeout = setTimeout(() => {
+            const items = document.querySelectorAll('#topic-list-target > .dropdown-item');
+            for (let item of items) {
+                item.style.display = item.innerText.toLowerCase().includes(val) ? 'block' : 'none';
+            }
+        }, 100);
     });
 
+    let baseSearchTimeout = null;
     document.getElementById('base-search-box').addEventListener('input', (e) => {
-        let val = e.target.value.toLowerCase();
-        const items = document.querySelectorAll('#base-list-target > .dropdown-item');
-        for (let item of items) {
-            item.style.display = item.innerText.toLowerCase().includes(val) ? 'block' : 'none';
-        }
+        clearTimeout(baseSearchTimeout);
+        const val = e.target.value.toLowerCase();
+        baseSearchTimeout = setTimeout(() => {
+            const items = document.querySelectorAll('#base-list-target > .dropdown-item');
+            for (let item of items) {
+                item.style.display = item.innerText.toLowerCase().includes(val) ? 'block' : 'none';
+            }
+        }, 100);
     });
 
     window.onclick = (e) => { 
