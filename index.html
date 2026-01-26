@@ -204,7 +204,7 @@
     const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     alphabet.push("OTH");
 
-    // Password hash sha-256
+    // Password: "password123" -> hashed to this value
     const PASSWORD_HASH = "79a70f9e9b1cfb62055d43e6935adf3ef549217fe567b17f83af6dd55385fe07";
 
     function sha256(str) {
@@ -262,10 +262,14 @@
         let bases = new Set();
         allEntries.forEach(e => {
             (e.topics || []).forEach(t => topics.add(t));
-            if(e.base) bases.add(e.base.split('/')[0]);
+            if(e.base) {
+                let baseStr = e.base.toString().trim();
+                bases.add(baseStr);
+            }
         });
         
         const topicTarget = document.getElementById('topic-list-target');
+        topicTarget.innerHTML = '';
         Array.from(topics).sort().forEach(t => {
             let d = document.createElement('div');
             d.className = 'dropdown-item';
@@ -275,6 +279,7 @@
         });
 
         const baseTarget = document.getElementById('base-list-target');
+        baseTarget.innerHTML = '';
         Array.from(bases).sort().forEach(b => {
             let d = document.createElement('div');
             d.className = 'dropdown-item';
@@ -300,7 +305,7 @@
         const filtered = allEntries.filter(e => {
             const matchQ = (e.title + e.words).toLowerCase().includes(query);
             const matchT = !activeTopic || (e.topics || []).includes(activeTopic);
-            const matchB = !activeBase || (e.base || '').split('/')[0] === activeBase;
+            const matchB = !activeBase || (e.base === activeBase);
             return matchQ && matchT && matchB;
         });
         document.getElementById('stat-count').innerText = `${filtered.length.toLocaleString()} items`;
@@ -509,17 +514,18 @@ h1 { font-size: 16pt; font-weight: bold; margin-top: 0; margin-bottom: 12pt; }
 
     document.getElementById('topic-search-box').addEventListener('input', (e) => {
         let val = e.target.value.toLowerCase();
-        const items = document.querySelectorAll('#topic-menu .dropdown-item');
-        items.forEach(item => {
+        const items = document.querySelectorAll('#topic-list-target > .dropdown-item');
+        for (let item of items) {
             item.style.display = item.innerText.toLowerCase().includes(val) ? 'block' : 'none';
-        });
+        }
     });
 
     document.getElementById('base-search-box').addEventListener('input', (e) => {
         let val = e.target.value.toLowerCase();
-        document.querySelectorAll('#base-menu .dropdown-item').forEach(item => {
+        const items = document.querySelectorAll('#base-list-target > .dropdown-item');
+        for (let item of items) {
             item.style.display = item.innerText.toLowerCase().includes(val) ? 'block' : 'none';
-        });
+        }
     });
 
     window.onclick = (e) => { 
