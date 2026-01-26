@@ -204,6 +204,7 @@
     const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     alphabet.push("OTH");
 
+    // Password: "password123" -> hashed to this value
     const PASSWORD_HASH = "79a70f9e9b1cfb62055d43e6935adf3ef549217fe567b17f83af6dd55385fe07";
 
     function sha256(str) {
@@ -315,6 +316,7 @@
             const matchB = !activeBase || (e.base === activeBase);
             return matchQ && matchT && matchB;
         });
+        console.log('Sidebar filter - query:', query, 'topic:', activeTopic, 'base:', activeBase, 'results:', filtered.length);
         document.getElementById('stat-count').textContent = `${filtered.length.toLocaleString()} items`;
         
         let listHtml = '';
