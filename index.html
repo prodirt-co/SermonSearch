@@ -311,22 +311,26 @@
     function renderSidebar() {
         const query = document.getElementById('main-search').value.toLowerCase();
         const filtered = allEntries.filter(e => {
-            const matchQ = (e.title + e.words).toLowerCase().includes(query);
+            const matchQ = (e.title + (e.words || '')).toLowerCase().includes(query);
             const matchT = !activeTopic || (e.topics || []).includes(activeTopic);
             const matchB = !activeBase || (e.base === activeBase);
             return matchQ && matchT && matchB;
         });
-        document.getElementById('stat-count').innerText = `${filtered.length.toLocaleString()} items`;
+        document.getElementById('stat-count').textContent = `${filtered.length.toLocaleString()} items`;
         
         let listHtml = '';
         filtered.slice(0, 150).forEach(e => {
             const isActive = selectedUid === e._uid ? 'active' : '';
+            const safeTitle = (e.title || '').replace(/'/g, "\\'");
             listHtml += `<div class="result-item ${isActive}" onclick="setSelection('${e._uid}')">
                 <input type="checkbox" class="check-box" ${checkedUids.has(e._uid)?'checked':''} onclick="event.stopPropagation(); toggleCheck('${e._uid}')">
-                <div style="overflow:hidden"><div style="font-weight:bold;white-space:nowrap;text-overflow:ellipsis;overflow:hidden">${e.title}</div></div>
+                <div style="overflow:hidden"><div style="font-weight:bold;white-space:nowrap;text-overflow:ellipsis;overflow:hidden">${safeTitle}</div></div>
             </div>`;
         });
-        document.getElementById('results-list').innerHTML = listHtml;
+        const resultsList = document.getElementById('results-list');
+        if (resultsList) {
+            resultsList.innerHTML = listHtml;
+        }
     }
 
     function setSelection(uid) {
@@ -517,7 +521,7 @@ h1 { font-size: 16pt; font-weight: bold; margin-top: 0; margin-bottom: 12pt; }
 
     document.getElementById('main-search').addEventListener('input', () => {
         clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(renderSidebar, 250);
+        searchTimeout = setTimeout(renderSidebar, 300);
     });
 
     let allTopics = [];
@@ -534,6 +538,8 @@ h1 { font-size: 16pt; font-weight: bold; margin-top: 0; margin-bottom: 12pt; }
             console.log('Filtered results:', filtered.length, 'in', performance.now() - start, 'ms');
             
             const target = document.getElementById('topic-list-target');
+            if (!target) return;
+            
             target.innerHTML = '';
             
             const renderStart = performance.now();
@@ -541,11 +547,18 @@ h1 { font-size: 16pt; font-weight: bold; margin-top: 0; margin-bottom: 12pt; }
                 let d = document.createElement('div');
                 d.className = 'dropdown-item';
                 d.textContent = t;
-                d.onclick = () => { activeTopic = t; document.getElementById('topic-trigger').textContent = t; toggleDropdown('topic'); renderSidebar(); };
+                d.onclick = () => { 
+                    activeTopic = t; 
+                    const trigger = document.getElementById('topic-trigger');
+                    if (trigger) trigger.textContent = t;
+                    toggleDropdown('topic'); 
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(renderSidebar, 100);
+                };
                 target.appendChild(d);
             });
             console.log('Rendered in', performance.now() - renderStart, 'ms');
-        }, 150);
+        }, 200);
     });
 
     let baseSearchTimeout = null;
