@@ -137,24 +137,6 @@
         .file-indicator strong {
             color: #007bff;
         }
-
-        /* EDIT MODE */
-        .edit-modal {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; z-index: 5000;
-            align-items: center; justify-content: center;
-        }
-        .edit-modal.show { display: flex; }
-        .edit-form {
-            background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 700px;
-            max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-        }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; color: #333; font-weight: bold; }
-        .form-group input, .form-group textarea, .form-group select {
-            width: 100%; padding: 10px; background: #fafafa; border: 1px solid #ccc;
-            color: #333; border-radius: 6px; font-family: inherit;
-        }
-        .form-group textarea { min-height: 200px; resize: vertical; }
     </style>
 </head>
 <body>
@@ -212,34 +194,6 @@
         </div>
     </div>
 
-    <!-- EDIT MODAL -->
-    <div id="edit-modal" class="edit-modal">
-        <div class="edit-form">
-            <h2 style="margin-bottom: 20px; color: #007bff;">Edit Sermon</h2>
-            <div class="form-group">
-                <label>Title</label>
-                <input type="text" id="edit-title">
-            </div>
-            <div class="form-group">
-                <label>Content</label>
-                <textarea id="edit-content"></textarea>
-            </div>
-            <div class="form-group">
-                <label>Topics (comma-separated)</label>
-                <input type="text" id="edit-topics">
-            </div>
-            <div class="form-group">
-                <label>Scriptures (comma-separated)</label>
-                <input type="text" id="edit-scriptures">
-            </div>
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button class="btn btn-blue" onclick="saveEdit()">Save</button>
-                <button class="btn btn-gray" onclick="closeEdit()">Cancel</button>
-                <button class="btn btn-red" onclick="deleteSermon()">Delete</button>
-            </div>
-        </div>
-    </div>
-
     <script>
     let allEntries = [];
     let selectedUid = null;
@@ -250,7 +204,7 @@
     const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     alphabet.push("OTH");
 
-    // Password: "password123" -> hashed to this value
+    // Password hash sha-256
     const PASSWORD_HASH = "79a70f9e9b1cfb62055d43e6935adf3ef549217fe567b17f83af6dd55385fe07";
 
     function sha256(str) {
@@ -346,7 +300,7 @@
         const filtered = allEntries.filter(e => {
             const matchQ = (e.title + e.words).toLowerCase().includes(query);
             const matchT = !activeTopic || (e.topics || []).includes(activeTopic);
-            const matchB = !activeBase || (e.base || '').startsWith(activeBase);
+            const matchB = !activeBase || (e.base || '').split('/')[0] === activeBase;
             return matchQ && matchT && matchB;
         });
         document.getElementById('stat-count').innerText = `${filtered.length.toLocaleString()} items`;
@@ -377,7 +331,6 @@
             <div class="action-bar">
                 <button class="btn btn-gray" onclick="copyContent()">📋 Copy</button>
                 <button class="btn btn-blue" onclick="exportWord()">📄 Word</button>
-                <button class="btn btn-orange" onclick="editSermon()">✏️ Edit</button>
                 ${checkedUids.size > 0 ? `<button class="btn btn-orange" onclick="bulkExport()">📦 Export ${checkedUids.size}</button>` : ''}
             </div>
             <div class="scroll-content">
@@ -537,46 +490,6 @@ h1 { font-size: 16pt; font-weight: bold; margin-top: 0; margin-bottom: 12pt; }
         });
     }
 
-    function editSermon() {
-        const selected = allEntries.find(x => x._uid === selectedUid);
-        if (!selected) return;
-        document.getElementById('edit-title').value = selected.title || '';
-        document.getElementById('edit-content').value = selected.words || '';
-        document.getElementById('edit-topics').value = (selected.topics || []).join(', ');
-        document.getElementById('edit-scriptures').value = (selected.scriptures || []).join(', ');
-        document.getElementById('edit-modal').classList.add('show');
-    }
-
-    function closeEdit() {
-        document.getElementById('edit-modal').classList.remove('show');
-    }
-
-    function saveEdit() {
-        const selected = allEntries.find(x => x._uid === selectedUid);
-        if (!selected) return;
-        selected.title = document.getElementById('edit-title').value;
-        selected.words = document.getElementById('edit-content').value;
-        selected.topics = document.getElementById('edit-topics').value.split(',').map(t => t.trim()).filter(t => t);
-        selected.scriptures = document.getElementById('edit-scriptures').value.split(',').map(t => t.trim()).filter(t => t);
-        selected._isDirty = true;
-        alert('✓ Changes saved locally!');
-        closeEdit();
-        setSelection(selectedUid);
-    }
-
-    function deleteSermon() {
-        if (confirm('Delete this sermon? This cannot be undone.')) {
-            const idx = allEntries.findIndex(x => x._uid === selectedUid);
-            if (idx >= 0) {
-                allEntries.splice(idx, 1);
-                selectedUid = null;
-                document.getElementById('details-panel').innerHTML = '<div style="text-align:center; padding-top: 100px; color: #999;"><h2>Select a sermon</h2></div>';
-                renderSidebar();
-                closeEdit();
-            }
-        }
-    }
-
     function resetApp() {
         activeTopic = '';
         activeBase = '';
@@ -596,7 +509,8 @@ h1 { font-size: 16pt; font-weight: bold; margin-top: 0; margin-bottom: 12pt; }
 
     document.getElementById('topic-search-box').addEventListener('input', (e) => {
         let val = e.target.value.toLowerCase();
-        document.querySelectorAll('#topic-menu .dropdown-item').forEach(item => {
+        const items = document.querySelectorAll('#topic-menu .dropdown-item');
+        items.forEach(item => {
             item.style.display = item.innerText.toLowerCase().includes(val) ? 'block' : 'none';
         });
     });
@@ -617,4 +531,3 @@ h1 { font-size: 16pt; font-weight: bold; margin-top: 0; margin-bottom: 12pt; }
     </script>
 </body>
 </html>
-
