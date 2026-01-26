@@ -168,7 +168,7 @@
                     <div class="dropdown-trigger" id="topic-trigger" onclick="toggleDropdown('topic')">Filter by Topic</div>
                     <div class="dropdown-menu" id="topic-menu">
                         <input type="text" id="topic-search-box" class="dropdown-search" placeholder="Search topics..." onclick="event.stopPropagation()">
-                        <div id="topic-list-target"></div>
+                        <div id="topic-list-target" style="max-height: 300px; overflow-y: auto;"></div>
                     </div>
                 </div>
 
@@ -271,10 +271,12 @@
             }
         });
         
+        // Store topics for search
+        allTopics = Array.from(topics).sort();
+        
         const topicTarget = document.getElementById('topic-list-target');
         topicTarget.innerHTML = '';
-        const topicArray = Array.from(topics).sort();
-        topicArray.forEach(t => {
+        allTopics.forEach(t => {
             let d = document.createElement('div');
             d.className = 'dropdown-item';
             d.textContent = t;
@@ -517,16 +519,24 @@ h1 { font-size: 16pt; font-weight: bold; margin-top: 0; margin-bottom: 12pt; }
         searchTimeout = setTimeout(renderSidebar, 250);
     });
 
+    let allTopics = [];
     let topicSearchTimeout = null;
+    
     document.getElementById('topic-search-box').addEventListener('input', (e) => {
         clearTimeout(topicSearchTimeout);
         const val = e.target.value.toLowerCase();
         topicSearchTimeout = setTimeout(() => {
-            const items = document.querySelectorAll('#topic-list-target > .dropdown-item');
-            for (let item of items) {
-                item.style.display = item.innerText.toLowerCase().includes(val) ? 'block' : 'none';
-            }
-        }, 100);
+            const filtered = val ? allTopics.filter(t => t.toLowerCase().includes(val)) : allTopics;
+            const target = document.getElementById('topic-list-target');
+            target.innerHTML = '';
+            filtered.slice(0, 100).forEach(t => {
+                let d = document.createElement('div');
+                d.className = 'dropdown-item';
+                d.textContent = t;
+                d.onclick = () => { activeTopic = t; document.getElementById('topic-trigger').textContent = t; toggleDropdown('topic'); renderSidebar(); };
+                target.appendChild(d);
+            });
+        }, 150);
     });
 
     let baseSearchTimeout = null;
