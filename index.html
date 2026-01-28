@@ -204,7 +204,9 @@
     const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     alphabet.push("OTH");
 
+    
     const PASSWORD_HASH = "79a70f9e9b1cfb62055d43e6935adf3ef549217fe567b17f83af6dd55385fe07";
+    let isAuthenticated = false;
 
     function sha256(str) {
         return Promise.resolve().then(() => {
